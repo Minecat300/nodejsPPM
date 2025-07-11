@@ -11,7 +11,7 @@ const [, , command, repoUrl] = process.argv;
 
 async function installRepo(repoUrl) {
     const repoName = repoUrl.split("/").pop().replace(".git", "");
-    const targetDir = path.join(process.cwd(), repoName);
+    const tempDir = path.join(process.cwd(), repoName);
 
     const spinner = ora(`Cloning ${repoName}...`).start();
     try {
@@ -23,17 +23,38 @@ async function installRepo(repoUrl) {
         return;
     }
 
-    if (fs.existsSync(path.join(targetDir, "package.json"))) {
-        spinner.start("Installing dependencies...");
-        try {
-            execSync("npm install", { cwd: targetDir, stdio: "inherit" });
-            spinner.succeed("Dependencies installed");
-        } catch (err) {
-            spinner.fail("npm install failed");
-            console.error(chalk.red(err));
+    const packagePath = path.join(tempDir, "package.json");
+    if (!fs.existsSync(packagePath)) {
+        console.log(chalk.red("No package.json found! Can't continue."));
+        return;
+    }
+
+    const pkg = JSON.parse(fs.readFileSync(packagePath, "utf8"));
+    const installPath = pkg.installPath
+        ? path.resolve(process.cwd(), pkg.installPath)
+        : tempDir;
+
+    if (!fs.existsSync(installPath)) {
+        fs.mkdirSync(installPath, { recursive: true });
+        console.log(chalk.green(`Created directory: ${installPath}`));
+    }
+
+    if (installPath !== tempDir) {
+        const files = fs.readdirSync(tempDir);
+        for (const file in files) {
+            fs.renameSync(path.join(tempDir, file), path.join(installPath, file));
         }
-    } else {
-        console.log(chalk.yellow("No package.json found - skipping install"));
+        fs.rmdirSync(tempDir);
+        console.log(chalk.cyan(`Moved repo to ${installPath}`));
+    }
+
+    spinner.start("Installing dependencies...");
+    try {
+        execSync("npm install", { cwd: targetDir, stdio: "inherit" });
+        spinner.succeed("Dependencies installed");
+    } catch (err) {
+        spinner.fail("npm install failed");
+        console.error(chalk.red(err));
     }
 }
 
