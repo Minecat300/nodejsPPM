@@ -2,6 +2,7 @@
 
 import path from "path";
 import fs from "fs";
+import os from "os";
 import { execSync } from "child_process";
 import simpleGit from "simple-git";
 import chalk from "chalk";
