@@ -4,8 +4,8 @@ const path = require("path");
 const fs = require("fs");
 const { execSync } = require("child_process");
 const simpleGit = require("simple-git");
-const ora = require("ora");
 const chalk = require("chalk");
+import ora from 'ora';
 
 const [, , command, repoUrl] = process.argv;
 
