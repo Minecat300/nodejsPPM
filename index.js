@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
-const path = require("path");
-const fs = require("fs");
-const { execSync } = require("child_process");
-const simpleGit = require("simple-git");
-const chalk = require("chalk");
-import ora from 'ora';
+import path from "path";
+import fs from "fs";
+import { execSync } from "child_process";
+import simpleGit from "simple-git";
+import chalk from "chalk";
+import ora from "ora";
 
 const [, , command, repoUrl] = process.argv;
 
