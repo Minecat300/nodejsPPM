@@ -88,7 +88,7 @@ async function installRepo(repoUrl) {
 
         try {
             const configResult = execSync(
-                `curl -X PUT --unix-socket /var/run/control.unit.sock http://localhost/config -d '${JSON.stringify(unitConfig)}'`,
+                `curl -X PUT --unix-socket /var/run/control.unit.sock --url http://localhost/config -d '${JSON.stringify(unitConfig)}'`,
                 { stdio: "pipe" }
             );
             spinner.succeed("Unit configuration applied");
