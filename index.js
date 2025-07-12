@@ -9,9 +9,21 @@ import ora from "ora";
 
 const [, , command, repoUrl] = process.argv;
 
+function expandHomeDir(p) {
+    if (!p) return p;
+    if (p.startsWith("~")) {
+        return path.join(os.homedir(), p.slice(1));
+    }
+    return p;
+}
+
 async function installRepo(repoUrl) {
     const repoName = repoUrl.split("/").pop().replace(".git", "");
-    const tempDir = path.join(process.cwd(), repoName);
+    const tempDir = path.join(os.homedir(), "packageManager/tempInstalls", repoName);
+
+    if (fs.existsSync(tempDir)) {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+    }
 
     const spinner = ora(`Cloning ${repoName}...`).start();
     try {
@@ -31,15 +43,15 @@ async function installRepo(repoUrl) {
 
     const pkg = JSON.parse(fs.readFileSync(packagePath, "utf8"));
     const installPath = pkg.installPath
-        ? path.resolve(process.cwd(), pkg.installPath)
-        : tempDir;
+        ? path.resolve(process.cwd(), expandHomeDir(pkg.installPath))
+        : path.join(process.cwd(), repoName);
 
     if (!fs.existsSync(installPath)) {
         fs.mkdirSync(installPath, { recursive: true });
         console.log(chalk.green(`Created directory: ${installPath}`));
     }
 
-    if (installPath !== tempDir) {
+    if (installPath !== path.join(process.cwd(), repoName)) {
         const files = fs.readdirSync(tempDir);
         for (const file in files) {
             fs.renameSync(path.join(tempDir, file), path.join(installPath, file));
