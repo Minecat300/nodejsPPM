@@ -61,7 +61,7 @@ async function installRepo(repoUrl) {
 
     spinner.start("Installing dependencies...");
     try {
-        execSync("npm install", { cwd: targetDir, stdio: "inherit" });
+        execSync("npm install", { cwd: installPath, stdio: "inherit" });
         spinner.succeed("Dependencies installed");
     } catch (err) {
         spinner.fail("npm install failed");
