@@ -7,6 +7,7 @@ import { execSync } from "child_process";
 import simpleGit from "simple-git";
 import chalk from "chalk";
 import ora from "ora";
+import { listeners } from "process";
 
 const [, , command, repoUrl] = process.argv;
 
@@ -66,6 +67,85 @@ async function installRepo(repoUrl) {
     } catch (err) {
         spinner.fail("npm install failed");
         console.error(chalk.red(err));
+    }
+
+    if (pkg.unitConfig) {
+        const unitConfig = {
+            listeners: {
+                [`*:${pkg.unitConfig.listenerPort}`]: {
+                    pass: `applications/${pkg.name}`
+                }
+            },
+            applications: {
+                [pkg.name]: {
+                    type: "node",
+                    working_directory: installPath,
+                    script: pkg.unitConfig.script || "index.js"
+                }
+            }
+        };
+
+        spinner.start("Configuring Unit...");
+
+        try {
+            const configResult = execSync(
+                `curl -X PUT --unix-socket /var/run/control.unit.sock http://localhost/config -d '${JSON.stringify(unitConfig)}'`,
+                { stdio: "pipe" }
+            );
+            spinner.succeed("Unit configuration applied");
+        } catch (err) {
+            spinner.fail("Failed to apply Unit config");
+            console.error(chalk.red(err.stderr?.toString() || err.toString()));
+        }
+    } else {
+        console.log(chalk.yellow("No unitConfig found in package.json"));
+    }
+
+    if (pkg.unitRoute && pkg.unitRoute.uri && pkg.unitRoute.port) {
+        const uri = pkg.unitRoute.uri;
+        const port = pkg.unitRoute.port;
+
+        const config = {
+            "action": {
+                "proxy": `http://127.0.0.1:${port}`
+            },
+            "match": {
+                "uri": `${uri}*`
+            }
+        };
+
+        const listenerPatch = {
+            "listeners": {
+                "*:443": {
+                    "tls": {
+                        "certificate": "flamey-cert"
+                    },
+                    "pass": "routes/secure"
+                }
+            }
+        };
+
+        const configPath = "/tmp/unit-route.json";
+        fs.writeFileSync(configPath, JSON.stringify(config));
+
+        const curlAddRoute = `curl -X PATCH --data-binary @${configPath} ` +
+            `--unix-socket /var/run/control.unit.sock ` +
+            `http://localhost/config/routes/secure`;
+
+        const listenerPatchPath = "/tmp/unit-listener.json";
+        fs.writeFileSync(listenerPatchPath, JSON.stringify(listenerPatch))
+
+        const curlPathListener = `curl -X PATCH --data-binary @${listenerPatchPath} ` +
+            `--unix-socket /var/run/control.unit.sock ` +
+            `http://localhost/config`;
+
+        try {
+            execSync(curlPathListener, { stdio: "inherit" });
+            execSync(curlAddRoute, { stdio: "inherit" });
+            console.log(chalk.green(`HTTPS route added: https://flameys.ddns.net${uri}`));
+        } catch (err) {
+            console.error(chalk.red("Failed to set Unit route:"), err);
+        }
     }
 }
 
