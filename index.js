@@ -53,7 +53,7 @@ async function installRepo(repoUrl) {
     }
 
     const files = fs.readdirSync(tempDir);
-    for (const file in files) {
+    for (const file of files) {
         fs.renameSync(path.join(tempDir, file), path.join(installPath, file));
     }
     fs.rmdirSync(tempDir);
