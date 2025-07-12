@@ -131,23 +131,22 @@ async function installRepo(repoUrl) {
         const configPath = "/tmp/unit-route.json";
         fs.writeFileSync(configPath, JSON.stringify(config));
 
-        const curlAddRoute = `curl -X PATCH --data-binary @${configPath} ` +
-            `--unix-socket /var/run/control.unit.sock ` +
-            `http://localhost/config/routes/secure`;
-
         const listenerPatchPath = "/tmp/unit-listener.json";
-        fs.writeFileSync(listenerPatchPath, JSON.stringify(listenerPatch))
+        fs.writeFileSync(listenerPatchPath, JSON.stringify(listenerPatch));
 
-        const curlPathListener = `curl -X PATCH --data-binary @${listenerPatchPath} ` +
-            `--unix-socket /var/run/control.unit.sock ` +
-            `http://localhost/config`;
-
+        spinner.start("Applying route config...");
         try {
-            execSync(curlPathListener, { stdio: "inherit" });
-            execSync(curlAddRoute, { stdio: "inherit" });
-            console.log(chalk.green(`HTTPS route added: https://flameys.ddns.net${uri}`));
+        execSync(`curl -X PUT --data-binary @${configPath} --unix-socket /var/run/control.unit.sock http://localhost/config/routes/secure`, { stdio: "inherit" });
+        spinner.succeed("Route config applied");
+
+        spinner.start("Patching listener config...");
+        execSync(`curl -X PATCH --data-binary @${listenerPatchPath} --unix-socket /var/run/control.unit.sock http://localhost/config`, { stdio: "inherit" });
+        spinner.succeed("Listener config patched");
+
+        console.log(chalk.green(`HTTPS route added: https://flameys.ddns.net${uri}`));
         } catch (err) {
-            console.error(chalk.red("Failed to set Unit route:"), err);
+        spinner.fail("Failed to set Unit route");
+        console.error(chalk.red("Error:"), err);
         }
     }
 }
