@@ -131,6 +131,9 @@ async function installRepo(repoUrl) {
         }
         };
 
+        const configPath = "/tmp/unit-route.json";
+        const listenerPatchPath = "/tmp/unit-listener.json";
+
         fs.writeFileSync(configPath, JSON.stringify(config));
         fs.writeFileSync(listenerPatchPath, JSON.stringify(listenerPatch));
 
