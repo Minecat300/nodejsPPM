@@ -87,10 +87,14 @@ async function installRepo(repoUrl) {
         spinner.start("Configuring Unit...");
 
         try {
+            const tmpConfigPath = "/tmp/unit-config.json";
+            fs.writeFileSync(tmpConfigPath, JSON.stringify(unitConfig));
+
             const configResult = execSync(
-                `curl -X PUT --unix-socket /var/run/control.unit.sock --url http://localhost/config -d '${JSON.stringify(unitConfig)}'`,
-                { stdio: "pipe" }
+            `curl -X PUT --unix-socket /var/run/control.unit.sock --url http://localhost/config --data-binary @${tmpConfigPath}`,
+            { stdio: "pipe" }
             );
+
             spinner.succeed("Unit configuration applied");
         } catch (err) {
             spinner.fail("Failed to apply Unit config");
