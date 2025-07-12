@@ -107,40 +107,40 @@ async function installRepo(repoUrl) {
     if (pkg.unitRoute && pkg.unitRoute.uri && pkg.unitRoute.port) {
         const uri = pkg.unitRoute.uri;
         const port = pkg.unitRoute.port;
+        const routeName = "secure";
 
         const config = {
-            "action": {
-                "proxy": `http://127.0.0.1:${port}`
+        [routeName]: {
+            action: {
+            proxy: `http://127.0.0.1:${port}`
             },
-            "match": {
-                "uri": `${uri}*`
+            match: {
+            uri: `${uri}*`
             }
+        }
         };
 
         const listenerPatch = {
-            "listeners": {
-                "*:443": {
-                    "tls": {
-                        "certificate": "flamey-cert"
-                    },
-                    "pass": "routes/secure"
-                }
+        listeners: {
+            "*:443": {
+            tls: {
+                certificate: "flamey-cert"
+            },
+            pass: `routes/${routeName}`
             }
+        }
         };
 
-        const configPath = "/tmp/unit-route.json";
         fs.writeFileSync(configPath, JSON.stringify(config));
-
-        const listenerPatchPath = "/tmp/unit-listener.json";
         fs.writeFileSync(listenerPatchPath, JSON.stringify(listenerPatch));
 
         spinner.start("Applying route config...");
         try {
-        execSync(`curl -X PUT --data-binary @${configPath} --unix-socket /var/run/control.unit.sock http://localhost/config/routes/secure`, { stdio: "inherit" });
+        execSync(`curl -X PATCH --data-binary @${configPath} --unix-socket /var/run/control.unit.sock http://localhost/config/routes`, { stdio: "inherit" });
         spinner.succeed("Route config applied");
 
         spinner.start("Patching listener config...");
-        execSync(`curl -X PATCH --data-binary @${listenerPatchPath} --unix-socket /var/run/control.unit.sock http://localhost/config`, { stdio: "inherit" });
+        execSync(`curl -X PUT --data-binary @${listenerPatchPath} --unix-socket /var/run/control.unit.sock http://localhost/config`, { stdio: "inherit" });
         spinner.succeed("Listener config patched");
 
         console.log(chalk.green(`HTTPS route added: https://flameys.ddns.net${uri}`));
