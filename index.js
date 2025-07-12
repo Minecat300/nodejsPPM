@@ -7,7 +7,6 @@ import { execSync } from "child_process";
 import simpleGit from "simple-git";
 import chalk from "chalk";
 import ora from "ora";
-import { listeners } from "process";
 
 const [, , command, repoUrl] = process.argv;
 
