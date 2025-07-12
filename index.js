@@ -28,7 +28,7 @@ async function installRepo(repoUrl) {
 
     const spinner = ora(`Cloning ${repoName}...`).start();
     try {
-        await simpleGit().clone(repoUrl);
+        await simpleGit().clone(repoUrl, tempDir);
         spinner.succeed(`Cloned ${repoName}`);
     } catch (err) {
         spinner.fail("Failed to clone");
@@ -52,14 +52,12 @@ async function installRepo(repoUrl) {
         console.log(chalk.green(`Created directory: ${installPath}`));
     }
 
-    if (installPath !== path.join(process.cwd(), repoName)) {
-        const files = fs.readdirSync(tempDir);
-        for (const file in files) {
-            fs.renameSync(path.join(tempDir, file), path.join(installPath, file));
-        }
-        fs.rmdirSync(tempDir);
-        console.log(chalk.cyan(`Moved repo to ${installPath}`));
+    const files = fs.readdirSync(tempDir);
+    for (const file in files) {
+        fs.renameSync(path.join(tempDir, file), path.join(installPath, file));
     }
+    fs.rmdirSync(tempDir);
+    console.log(chalk.cyan(`Moved repo to ${installPath}`));
 
     spinner.start("Installing dependencies...");
     try {
