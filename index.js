@@ -72,6 +72,8 @@ async function installRepo(repoUrl) {
         addToNginxList(pkg.nginxConfig, repoName);
         updateNginxConfig();
     }
+
+    setupPm2AutoStart(path.join(pkg.installPath, pkg.main), repoName);
 }
 
 function addToNginxList(config, repoName) {
@@ -174,6 +176,24 @@ ${httpsConfig}
 
     fs.writeFileSync("/etc/nginx/sites-available/default", fullConfig);
     execSync("nginx -s reload");
+}
+
+function setupPm2AutoStart(scriptPath, appName) {
+    try {
+        execSync(`pm2 start ${scriptPath} --name ${appName}`, { stdio: "inherit" });
+        execSync(`pm2 save`, { stdio: "inherit" });
+
+        const startupCmd = execSync(`pm2 startup`, { encoding: "utf8" });
+        console.log("Run this command with sudo to enable pm2 startup:");
+        const sudoCmdMatch = startupCmd.match(/sudo .*/);
+        if (sudoCmdMatch) {
+            console.log(sudoCmdMatch[0]);
+        } else {
+            console.log("Couldn't find the pm2 startup sudo command.");
+        }
+    } catch (err) {
+        console.error("Error setting up pm2:", err);
+    }
 }
 
 if (command === "install" && repoUrl) {
