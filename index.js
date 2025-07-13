@@ -68,90 +68,112 @@ async function installRepo(repoUrl) {
         console.error(chalk.red(err));
     }
 
-    if (pkg.unitConfig) {
-        const unitConfig = {
-            listeners: {
-                [`*:${pkg.unitConfig.listenerPort}`]: {
-                    pass: `applications/${pkg.name}`
-                }
-            },
-            applications: {
-                [pkg.name]: {
-                    type: "node",
-                    working_directory: installPath,
-                    script: pkg.unitConfig.script || "index.js"
-                }
-            }
-        };
+    if (pkg.nginxConfig) {
+        addToNginxList(pkg.nginxConfig, repoName);
+        updateNginxConfig();
+    }
+}
 
-        spinner.start("Configuring Unit...");
+function addToNginxList(config, repoName) {
+    const configPath = path.join(os.homedir(), "packageManager/nginxConfig.json");
+    const nginxConfigJson = JSON.parse(fs.readFileSync(configPath, "utf8"));
+    nginxConfigJson[repoName] = config;
+    fs.writeFileSync(configPath, JSON.stringify(nginxConfigJson, null, 2));
+}
 
-        try {
-            const tmpConfigPath = "/tmp/unit-config.json";
-            fs.writeFileSync(tmpConfigPath, JSON.stringify(unitConfig));
+function updateNginxConfig() {
+    const configPath = path.join(os.homedir(), "packageManager/nginxConfig.json");
+    const nginxConfigJson = JSON.parse(fs.readFileSync(configPath, "utf8"));
 
-            const configResult = execSync(
-            `curl -X PUT --unix-socket /var/run/control.unit.sock --url http://localhost/config --data-binary @${tmpConfigPath}`,
-            { stdio: "pipe" }
-            );
+    let httpConfig = `
+server {
+    listen 80;
+    server_name flameys.ddns.net 0.0.0.0;
+    client_max_body_size 1024M;
 
-            spinner.succeed("Unit configuration applied");
-        } catch (err) {
-            spinner.fail("Failed to apply Unit config");
-            console.error(chalk.red(err.stderr?.toString() || err.toString()));
+`;
+
+    let httpsConfig = `
+server {
+    listen 443 ssl;
+    server_name flameys.ddns.net;
+    ssl_certificate /etc/letsencrypt/live/flameys.ddns.net/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/flameys.ddns.net/privkey.pem;
+    client_max_body_size 1024M;
+
+`;
+
+    for (const repoName in nginxConfigJson) {
+        const config = nginxConfigJson[repoName];
+        httpConfig += `
+    location /${config.uri} {
+        if ($request_method = OPTIONS ) {
+            add_header 'Access-Control-Allow-Origin' '*' always;
+            add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
+            add_header 'Access-Control-Allow-Headers' 'Origin, Content-Type, Accept, Authorization' always;
+            add_header 'Access-Control-Max-Age' 1728000;
+            add_header 'Content-Length' 0;
+            add_header 'Content-Type' 'text/plain charset=UTF-8';
+            return 204;
         }
-    } else {
-        console.log(chalk.yellow("No unitConfig found in package.json"));
+
+        # For actual requests
+        add_header 'Access-Control-Allow-Origin' '*';
+
+        proxy_pass https://localhost:${config.port}/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    if (pkg.unitRoute && pkg.unitRoute.uri && pkg.unitRoute.port) {
-        const uri = pkg.unitRoute.uri;
-        const port = pkg.unitRoute.port;
-        const routeName = "secure";
-
-        const config = {
-        [routeName]: {
-            action: {
-            proxy: `http://127.0.0.1:${port}`
-            },
-            match: {
-            uri: `${uri}*`
-            }
+`;
+        httpsConfig += `
+    location /${config.uri} {
+        # Handle CORS preflight requests
+        if ($request_method = OPTIONS ) {
+            add_header 'Access-Control-Allow-Origin' '*' always;
+            add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
+            add_header 'Access-Control-Allow-Headers' 'Origin, Content-Type, Accept, Authorization' always;
+            add_header 'Access-Control-Max-Age' 1728000;
+            add_header 'Content-Length' 0;
+            add_header 'Content-Type' 'text/plain charset=UTF-8';
+            return 204;
         }
-        };
 
-        const listenerPatch = {
-        listeners: {
-            "*:443": {
-            tls: {
-                certificate: "flamey-cert"
-            },
-            pass: `routes/${routeName}`
-            }
-        }
-        };
+        # For actual requests
+        add_header 'Access-Control-Allow-Origin' '*';
 
-        const configPath = "/tmp/unit-route.json";
-        const listenerPatchPath = "/tmp/unit-listener.json";
-
-        fs.writeFileSync(configPath, JSON.stringify(config));
-        fs.writeFileSync(listenerPatchPath, JSON.stringify(listenerPatch));
-
-        spinner.start("Applying route config...");
-        try {
-        execSync(`curl -X PATCH --data-binary @${configPath} --unix-socket /var/run/control.unit.sock http://localhost/config/routes`, { stdio: "inherit" });
-        spinner.succeed("Route config applied");
-
-        spinner.start("Patching listener config...");
-        execSync(`curl -X PUT --data-binary @${listenerPatchPath} --unix-socket /var/run/control.unit.sock http://localhost/config`, { stdio: "inherit" });
-        spinner.succeed("Listener config patched");
-
-        console.log(chalk.green(`HTTPS route added: https://flameys.ddns.net${uri}`));
-        } catch (err) {
-        spinner.fail("Failed to set Unit route");
-        console.error(chalk.red("Error:"), err);
-        }
+        proxy_pass https://localhost:${config.port}/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_ssl_verify off;
     }
+
+`;
+    }
+
+    httpConfig += `
+}
+    `;
+    httpsConfig += `
+}
+    `;
+
+    const fullConfig = `
+    
+${httpConfig}
+
+${httpsConfig}
+    
+    `;
+
+    fs.writeFileSync("/etc/nginx/sites-available/default", fullConfig);
+    execSync("nginx -s reload");
 }
 
 if (command === "install" && repoUrl) {
