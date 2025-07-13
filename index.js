@@ -59,13 +59,13 @@ async function installRepo(repoUrl) {
     fs.rmdirSync(tempDir);
 
     try {
-        const username = os.userInfo().username;
+        const username = process.env.SUDO_USER || os.userInfo().username;
         execSync(`chown -R ${username}:${username} "${installPath}"`);
         console.log(chalk.green(`Fixed file ownership to user ${username}`));
     } catch (err) {
         console.warn(chalk.yellow(`Could not fix ownership: ${err.message}`));
     }
-    
+
     console.log(chalk.cyan(`Moved repo to ${installPath}`));
 
     spinner.start("Installing dependencies...");
