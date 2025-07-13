@@ -99,7 +99,7 @@ function updateNginxConfig() {
     let httpConfig = `
 server {
     listen 80;
-    server_name flameys.ddns.net 0.0.0.0;
+    server_name flameys.net 0.0.0.0;
     client_max_body_size 1024M;
 
 `;
@@ -107,9 +107,9 @@ server {
     let httpsConfig = `
 server {
     listen 443 ssl;
-    server_name flameys.ddns.net;
-    ssl_certificate /etc/letsencrypt/live/flameys.ddns.net/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/flameys.ddns.net/privkey.pem;
+    server_name flameys.net;
+    ssl_certificate /etc/letsencrypt/live/flameys.net/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/flameys.net/privkey.pem;
     client_max_body_size 1024M;
 
 `;
