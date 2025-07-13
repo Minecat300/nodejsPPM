@@ -75,14 +75,14 @@ async function installRepo(repoUrl) {
 }
 
 function addToNginxList(config, repoName) {
-    const configPath = path.join(os.homedir(), "packageManager/nginxConfig.json");
+    const configPath = path.join("/home/minecat300/", "packageManager/nginxConfig.json");
     const nginxConfigJson = JSON.parse(fs.readFileSync(configPath, "utf8"));
     nginxConfigJson[repoName] = config;
     fs.writeFileSync(configPath, JSON.stringify(nginxConfigJson, null, 2));
 }
 
 function updateNginxConfig() {
-    const configPath = path.join(os.homedir(), "packageManager/nginxConfig.json");
+    const configPath = path.join("/home/minecat300/", "packageManager/nginxConfig.json");
     const nginxConfigJson = JSON.parse(fs.readFileSync(configPath, "utf8"));
 
     let httpConfig = `
