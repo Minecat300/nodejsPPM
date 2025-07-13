@@ -116,6 +116,10 @@ server {
 
     for (const repoName in nginxConfigJson) {
         const config = nginxConfigJson[repoName];
+        let httpType = "http"
+        if (config.https) {
+            httpType += "s";
+        }
         httpConfig += `
     location /${config.uri} {
         if ($request_method = OPTIONS ) {
@@ -131,7 +135,7 @@ server {
         # For actual requests
         add_header 'Access-Control-Allow-Origin' '*';
 
-        proxy_pass https://localhost:${config.port}/;
+        proxy_pass ${httpType}://localhost:${config.port}/;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -156,7 +160,7 @@ server {
         # For actual requests
         add_header 'Access-Control-Allow-Origin' '*';
 
-        proxy_pass https://localhost:${config.port}/;
+        proxy_pass ${httpType}://localhost:${config.port}/;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
