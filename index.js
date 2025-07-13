@@ -183,8 +183,9 @@ function setupPm2AutoStart(scriptPath, appName) {
         execSync(`pm2 start ${scriptPath} --name ${appName}`, { stdio: "inherit" });
         execSync(`pm2 save`, { stdio: "inherit" });
 
-        const startupCmd = execSync(`pm2 startup`, { encoding: "utf8" });
-        console.log("Run this command with sudo to enable pm2 startup:");
+        const user = process.env.SUDO_USER || process.env.USER;
+        const startupCmd = execSync(`pm2 startup systemd -u ${user} --hp /home/${user}`, { encoding: "utf8" });
+        console.log("Run this command to enable pm2 startup:");
         const sudoCmdMatch = startupCmd.match(/sudo .*/);
         if (sudoCmdMatch) {
             console.log(sudoCmdMatch[0]);
@@ -195,6 +196,7 @@ function setupPm2AutoStart(scriptPath, appName) {
         console.error("Error setting up pm2:", err);
     }
 }
+
 
 if (command === "install" && repoUrl) {
     installRepo(repoUrl);
