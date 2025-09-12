@@ -168,12 +168,12 @@ setup();
 main();
 
 async function main() {
-    const args = minimist(process.argv.slice(1), {
+    const args = minimist(process.argv.slice(2), {
         boolean: ['p', 'private']
     });
 
     const command = args._[0];
-    console.log(args);
+
     if (command == "install") {
         const user = args._[1];
         const repoName = args._[2];
