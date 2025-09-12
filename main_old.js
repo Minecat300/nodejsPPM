@@ -10,14 +10,6 @@ import ora from "ora";
 
 const [, , command, repoUrl] = process.argv;
 
-function expandHomeDir(p) {
-    if (!p) return p;
-    if (p.startsWith("~")) {
-        return path.join(os.homedir(), p.slice(1));
-    }
-    return p;
-}
-
 async function installRepo(repoUrl) {
     const repoName = repoUrl.split("/").pop().replace(".git", "");
     const tempDir = path.join(os.homedir(), "packageManager/tempInstalls", repoName);
@@ -92,104 +84,7 @@ function addToNginxList(config, repoName) {
     fs.writeFileSync(configPath, JSON.stringify(nginxConfigJson, null, 2));
 }
 
-function updateNginxConfig() {
-    const configPath = path.join("/home/minecat300/", "packageManager/nginxConfig.json");
-    const nginxConfigJson = JSON.parse(fs.readFileSync(configPath, "utf8"));
 
-    let httpConfig = `
-server {
-    listen 80;
-    server_name flameys.net 0.0.0.0;
-    client_max_body_size 1024M;
-
-`;
-
-    let httpsConfig = `
-server {
-    listen 443 ssl;
-    server_name flameys.net;
-    ssl_certificate /etc/letsencrypt/live/flameys.net/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/flameys.net/privkey.pem;
-    client_max_body_size 1024M;
-
-`;
-
-    for (const repoName in nginxConfigJson) {
-        const config = nginxConfigJson[repoName];
-        let httpType = "http"
-        if (config.https) {
-            httpType += "s";
-        }
-        httpConfig += `
-    location /${config.uri} {
-        if ($request_method = OPTIONS ) {
-            add_header 'Access-Control-Allow-Origin' '*' always;
-            add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
-            add_header 'Access-Control-Allow-Headers' 'Origin, Content-Type, Accept, Authorization' always;
-            add_header 'Access-Control-Max-Age' 1728000;
-            add_header 'Content-Length' 0;
-            add_header 'Content-Type' 'text/plain charset=UTF-8';
-            return 204;
-        }
-
-        # For actual requests
-        add_header 'Access-Control-Allow-Origin' '*';
-
-        proxy_pass ${httpType}://localhost:${config.port}/;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-`;
-        httpsConfig += `
-    location /${config.uri} {
-        # Handle CORS preflight requests
-        if ($request_method = OPTIONS ) {
-            add_header 'Access-Control-Allow-Origin' '*' always;
-            add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
-            add_header 'Access-Control-Allow-Headers' 'Origin, Content-Type, Accept, Authorization' always;
-            add_header 'Access-Control-Max-Age' 1728000;
-            add_header 'Content-Length' 0;
-            add_header 'Content-Type' 'text/plain charset=UTF-8';
-            return 204;
-        }
-
-        # For actual requests
-        add_header 'Access-Control-Allow-Origin' '*';
-
-        proxy_pass ${httpType}://localhost:${config.port}/;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_ssl_verify off;
-    }
-
-`;
-    }
-
-    httpConfig += `
-}
-    `;
-    httpsConfig += `
-}
-    `;
-
-    const fullConfig = `
-    
-${httpConfig}
-
-${httpsConfig}
-    
-    `;
-
-    fs.writeFileSync("/etc/nginx/sites-available/default", fullConfig);
-    execSync("nginx -s reload");
-}
 
 function setupPm2AutoStart(scriptPath, appName) {
     try {

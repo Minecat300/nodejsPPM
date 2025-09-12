@@ -1,0 +1,213 @@
+import fs from "fs";
+import path from "path";
+import { execSync } from "child_process";
+import { setUpFile, getCurrentDir } from "./utils.js";
+
+export function nginxSetup() {
+    const servicePath = path.join(getCurrentDir(), "nginxServiceConfig.json");
+    const serverPath = path.join(getCurrentDir(), "nginxServerConfig.json");
+    if (fs.existsSync(servicePath)) {
+        setUpFile(servicePath, "{}");
+    }
+    if (fs.existsSync(serverPath)) {
+        setUpFile(serverPath, "{}");
+    }
+}
+
+function updateNginxHTTPConfig(reload = true) {
+    const serverConfigPath = path.join(getCurrentDir(), "nginxServerConfig.json");
+    const serverConfigJson = JSON.parse(fs.readFileSync(serverConfigPath, "utf8"));
+
+    for (const server in serverConfigJson) {
+        const serverNginxPath = `/etc/nginx/sites-available/http${server}`;
+        if (!fs.existsSync(serverNginxPath)) {
+            fs.writeFileSync(serverNginxPath, "");
+        }
+        const serverConfigValues = serverConfigJson[server];
+        const config = `
+
+server {
+    listen 80;
+    server_name ${serverConfigValues.urls.join(" ")};
+
+    return 301 https://$host$request_uri
+}
+
+`.trim();
+        fs.writeFileSync(serverNginxPath, config);
+
+        const enabledPath = `/etc/nginx/sites-enabled/http${server}`;
+        if (!fs.existsSync(enabledPath)) {
+            execSync(`ln -s ${serverNginxPath} ${enabledPath}`);
+        }
+    }
+    if (reload) {
+        execSync(`systemctl reload nginx`);
+    }
+}
+
+function updateNginxHTTPSConfig(reload = true) {
+    const serverConfigPath = path.join(getCurrentDir(), "nginxServerConfig.json");
+    const serviceConfigPath = path.join(getCurrentDir(), "nginxServiceConfig.json");
+    const serverConfigJson = JSON.parse(fs.readFileSync(serverConfigPath, "utf8"));
+    const serviceConfigJson = JSON.parse(fs.readFileSync(serviceConfigPath, "utf8"));
+
+    for (const server in serverConfigJson) {
+        const serverNginxPath = `/etc/nginx/sites-available/https${server}`;
+        if (!fs.existsSync(serverNginxPath)) {
+            fs.writeFileSync(serverNginxPath, "");
+        }
+        const serverConfigValues = serverConfigJson[server];
+        let fullConfig = `
+server {
+    listen 443 ssl;
+    server_name ${serverConfigValues.urls.join(" ")};
+    ssl_certificate ${serverConfigValues.certificate};
+    ssl_certificate_key ${serverConfigValues.certificateKey};
+    client_max_body_size 1024M;
+
+`
+        for (const service in serviceConfigJson) {
+            const serviceConfigValues = serviceConfigJson[service];
+            if (!serviceConfigValues.servers.contains(server)) continue;
+
+            const httpType = serviceConfigValues.https ? "https" : "http";
+            fullConfig += `
+    location /${serviceConfigValues.uri} {
+        # Handle CORS preflight requests
+        if ($request_method = OPTIONS ) {
+            add_header 'Access-Control-Allow-Origin' '*' always;
+            add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
+            add_header 'Access-Control-Allow-Headers' 'Origin, Content-Type, Accept, Authorization' always;
+            add_header 'Access-Control-Max-Age' 1728000;
+            add_header 'Content-Length' 0;
+            add_header 'Content-Type' 'text/plain charset=UTF-8';
+            return 204;
+        }
+
+        # For actual requests
+        add_header 'Access-Control-Allow-Origin' '*';
+
+        proxy_pass ${httpType}://localhost:${serviceConfigValues.port}/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_ssl_verify off;
+    }
+
+`
+        }
+        fs.writeFileSync(serverNginxPath, fullConfig.trim());
+
+        const enabledPath = `/etc/nginx/sites-enabled/https${server}`;
+        if (!fs.existsSync(enabledPath)) {
+            execSync(`ln -s ${serverNginxPath} ${enabledPath}`);
+        }
+    }
+    if (reload) {
+        execSync(`systemctl reload nginx`);
+    }
+}
+
+export function updateNginxConfig(reload = true) {
+    updateNginxHTTPConfig(false);
+    updateNginxHTTPSConfig(false);
+    if (reload) {
+        execSync(`systemctl reload nginx`);
+    }
+}
+
+export function addNewService(name, port, uri, https = true, servers, updateConfig = true) {
+    if (!name || !port || !uri || !servers) {
+        console.error("Missing inputs");
+        return;
+    }
+    if (typeof port !== "number") {
+        console.error("Port must be a number");
+        return;
+    }
+
+    const serviceConfigPath = path.join(getCurrentDir(), "nginxServiceConfig.json");
+    const serviceConfigJson = JSON.parse(fs.readFileSync(serviceConfigPath, "utf8"));
+
+    if (serviceConfigJson[name]) {
+        console.warn(`Service "${name}" already exists. Overwriting.`);
+    }
+
+    serviceConfigJson[name] = {
+        port,
+        uri,
+        https,
+        servers
+    };
+    fs.writeFileSync(serviceConfigPath, JSON.stringify(serviceConfigJson, null, 2));
+    if (updateConfig) {
+        updateNginxConfig();
+    }
+}
+
+export function removeService(name, updateConfig = true) {
+    if (!name) {
+        console.error("Missing input");
+        return;
+    }
+    const serviceConfigPath = path.join(getCurrentDir(), "nginxServiceConfig.json");
+    const serviceConfigJson = JSON.parse(fs.readFileSync(serviceConfigPath, "utf8"));
+    delete serviceConfigJson[name];
+    fs.writeFileSync(serviceConfigPath, JSON.stringify(serviceConfigJson, null, 2));
+    if (updateConfig) {
+        updateNginxConfig();
+    }
+}
+
+export function addNewServer(name, urls, certificate, certificateKey, updateConfig = true) {
+    if (!name || !urls || !certificate || ! certificateKey) {
+        console.error("Missing inputs");
+        return;
+    }
+
+    const serverConfigPath = path.join(getCurrentDir(), "nginxServerConfig.json");
+    const serverConfigJson = JSON.parse(fs.readFileSync(serverConfigPath, "utf8"));
+
+    if (serverConfigJson[name]) {
+        console.warn(`Server "${name}" already exists. Overwriting.`);
+    }
+
+    serverConfigJson[name] = {
+        urls,
+        certificate,
+        certificateKey
+    };
+    fs.writeFileSync(serverConfigPath, JSON.stringify(serverConfigJson, null, 2));
+    if (updateConfig) {
+        updateNginxConfig();
+    }
+}
+
+export function removeServer(name, updateConfig = true) {
+    if(!name) {
+        console.error("Missing input");
+        return;
+    }
+    const serverConfigPath = path.join(getCurrentDir(), "nginxServerConfig.json");
+    const serviceConfigPath = path.join(getCurrentDir(), "nginxServiceConfig.json");
+    const serverConfigJson = JSON.parse(fs.readFileSync(serverConfigPath, "utf8"));
+    const serviceConfigJson = JSON.parse(fs.readFileSync(serviceConfigPath, "utf8"));
+    for (const service in serviceConfigJson) {
+        const serviceConfigValues = serviceConfigJson[service];
+        if (!serviceConfigValues.servers.contains(name)) continue;
+        if (serviceConfigValues.servers.length > 1) {
+            serviceConfigValues.servers.splice(serviceConfigValues.servers.indexOf(name), 1);
+            continue;
+        }
+        removeService(service, false);
+    }
+    delete serverConfigJson[name];
+    fs.writeFileSync(serviceConfigPath, JSON.stringify(serviceConfigJson, null, 2));
+    fs.writeFileSync(serverConfigPath, JSON.stringify(serverConfigJson, null, 2));
+    if (updateConfig) {
+        updateNginxConfig();
+    }
+}

@@ -1,0 +1,21 @@
+{
+    "name": "project-package-manager",
+    "version": "1.0.0",
+    "description": "Handles the packages for projects.",
+    "main": "main.js",
+    "type": "module",
+    "scripts": {
+        "start": "node main.js",
+        "install": "node installer.js"
+    },
+    "keywords": [],
+    "author": "Minecat",
+    "license": "none",
+    "installPath": "~/projectPackageManger/",
+    "dependencies": {
+        "chalk": "^5.6.2",
+        "minimist": "^1.2.8",
+        "ora": "^8.2.0",
+        "simple-git": "^3.28.0"
+    }
+}
