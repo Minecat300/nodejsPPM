@@ -5,8 +5,7 @@
     "main": "main.js",
     "type": "module",
     "scripts": {
-        "start": "node main.js",
-        "install": "node installer.js"
+        "start": "node main.js"
     },
     "keywords": [],
     "author": "Minecat",
