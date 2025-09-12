@@ -172,19 +172,23 @@ async function main() {
         boolean: ['p', 'private']
     });
 
-    if (args._[0] === "install") {
+    const command = args._[0];
+
+    if (command === "install") {
         const user = args._[1];
         const repoName = args._[2];
         const privateRepo = args.p || args.private;
         if (!user) {
-            console.error("No user was provided");
+            console.error(chalk.red("No user was provided"));
             return;
         }
         if (!repoName) {
-            console.error("No repository name was provided");
+            console.error(chalk.red("No repository name was provided"));
             return;
         }
 
         await installPackage(user, repoName, privateRepo);
+        return;
     }
+    console.log(chalk.cyan("no command provided"));
 }
