@@ -165,23 +165,26 @@ function setup() {
 }
 
 setup();
+main();
 
-const args = minimist(process.argv.slice(1), {
-    boolean: ['p', 'private']
-});
+async function main() {
+    const args = minimist(process.argv.slice(1), {
+        boolean: ['p', 'private']
+    });
 
-if (args._[0] == "install") {
-    const user = args._[1];
-    const repoName = args._[2];
-    const privateRepo = args.p || args.private;
-    if (!user) {
-        console.error("No user was provided");
-        return;
+    if (args._[0] === "install") {
+        const user = args._[1];
+        const repoName = args._[2];
+        const privateRepo = args.p || args.private;
+        if (!user) {
+            console.error("No user was provided");
+            return;
+        }
+        if (!repoName) {
+            console.error("No repository name was provided");
+            return;
+        }
+
+        await installPackage(user, repoName, privateRepo);
     }
-    if (!repoName) {
-        console.error("No repository name was provided");
-        return;
-    }
-
-    installPackage(user, repoName, privateRepo);
 }
