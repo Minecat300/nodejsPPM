@@ -67,6 +67,7 @@ function moveFilesToInstallPath(installPath, tempDir) {
             fs.renameSync(path.join(tempDir, file), path.join(installPath, file));
         }
         fs.rmdirSync(tempDir);
+        spinner.succeed(`Moved files to : ${installPath}`);
     } catch (err) {
         spinner.fail("Failed to move files");
         console.error(chalk.red(err));
