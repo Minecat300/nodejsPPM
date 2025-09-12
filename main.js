@@ -173,8 +173,8 @@ async function main() {
     });
 
     const command = args._[0];
-
-    if (command === "install") {
+    console.log(args);
+    if (command == "install") {
         const user = args._[1];
         const repoName = args._[2];
         const privateRepo = args.p || args.private;
