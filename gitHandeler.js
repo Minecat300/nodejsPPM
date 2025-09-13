@@ -18,7 +18,12 @@ export async function cloneRepo(cloneDir, user, repoName, privateRepo) {
     const url = getRepoUrl(user, repoName, privateRepo);
 
     return new Promise((resolve, reject) => {
-        const gitProcess = spawn("git", ["clone", url, cloneDir], { stdio: "inherit" });
+        const gitProcess = spawn("git", ["clone", url, cloneDir], { stdio: "pipe" });
+
+        let stderr = "";
+        gitProcess.stderr.on("data", (data) => {
+            stderr += data.toString();
+        });
 
         const timeout = setTimeout(() => {
             gitProcess.kill();
@@ -33,7 +38,7 @@ export async function cloneRepo(cloneDir, user, repoName, privateRepo) {
                 resolve();
             } else {
                 spinner.fail(`Failed to clone ${repoName} (exit code ${code})`);
-                reject(new Error(`Git clone failed with exit code ${code}`));
+                reject(new Error(stderr || `Git clone failed with exit code ${code}`));
             }
         });
 

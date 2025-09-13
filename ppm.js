@@ -107,12 +107,14 @@ async function installPackage(user, repoName, privateRepo) {
     const tempDir = path.join(getCurrentDir(), "tempPackages", repoName);
     safeRemove(tempDir);
 
+    let installPath;
+
     try {
         ensureDir(tempDir);
         await cloneRepo(tempDir, user, repoName, privateRepo);
         const pkg = getPackageJson(tempDir);
         const packageName = pkg.name || repoName;
-        const installPath = getAndCreateInstallPath(pkg, packageName);
+        installPath = getAndCreateInstallPath(pkg, packageName);
         moveFilesToInstallPath(installPath, tempDir);
         fixPermissions(installPath);
         installDependancies(installPath);
