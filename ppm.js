@@ -164,6 +164,7 @@ async function updatePackage(packageName) {
     const spinner = ora(`Updating package: ${packageName}...`).start();
     try {
         await gitPullRepo(pkg.installPath);
+        installDependancies(pkg.installPath);
         removePackageData(packageName);
         const pkgJson = getPackageJson(pkg.installPath);
         addPackageData(pkgJson, pkg.installPath);
