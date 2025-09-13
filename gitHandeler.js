@@ -45,7 +45,7 @@ export async function getRepoUrlFromPath(repoPath) {
 }
 
 export async function gitPullRepo(path) {
-    const repoUrl = getRepoUrlFromPath(path) ?? "Not found";
+    const repoUrl = await getRepoUrlFromPath(path) ?? "Not found";
     const git = simpleGit(path);
     const spinner = ora(`Pulling from ${repoUrl}`).start();
     try {
