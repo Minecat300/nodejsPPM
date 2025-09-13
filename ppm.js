@@ -31,7 +31,7 @@ function getAndCreateInstallPath(pkg, packageName) {
     ensureDir(installPath);
     if (!isDirEmpty(installPath)) {
         installPath = undefined;
-        throw chalk.orange("Install path not empty");
+        console.error(chalk.orange("Install path not empty"));
     }
     return installPath;
 }
