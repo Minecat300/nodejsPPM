@@ -34,28 +34,65 @@ export function expandHomeDir(p) {
     return p;
 }
 
+export function ensureDir(dir) {
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true, force: true });
+    }
+}
+
+export function safeRemove(targetPath) {
+    if (!targetPath) {
+        throw new Error(chalk.orange("No path provided."));
+    }
+
+    const resolved = path.resolve(targetPath);
+
+    const forbidden = ["/", "/root", "/home", "/etc", "/bin", "/usr", "/var"];
+
+    if (forbidden.includes(resolved)) {
+        throw new Error(chalk.red(`Refusing to remove critical path: ${resolved}`));
+    }
+
+    if (resolved.split(path.sep).filter(Boolean).length < 2) {
+        throw new Error(chalk.red(`Refusing to remove high-level path: ${resolved}`));
+    }
+
+    if (!fs.existsSync(resolved)) {
+        return;
+    }
+
+    fs.rmSync(resolved, { recursive: true, force: true });
+}
+
 function spaces(num) {
     return " ".repeat(num);
 }
 
-export function printTable(obj, atrs) {
+function truncate(str, max) {
+    str = String(str ?? "");
+    return str.length > max ? str.slice(0, max - 1) + "…" : str;
+}
+
+export function printTable(obj, atrs, maxLength = 20) {
     const printList = [];
     const lengthPerLines = new Array(atrs.length + 1).fill(4);
 
     lengthPerLines[0] = "name".length;
     for (let i = 0; i < atrs.length; i++) {
-        lengthPerLines[i+1] = atrs[i].length;
+        if (lengthPerLines[i+1] < atrs[i].length) {
+            lengthPerLines[i+1] = atrs[i].length;
+        }
     }
 
     for (const name in obj) {
         let data = obj[name];
         if (lengthPerLines[0] < name.length) {
-            lengthPerLines[0] = name.length;
+            lengthPerLines[0] = truncate(name, maxLength).length;
         }
         for (let i = 0; i < atrs.length; i++) {
             const atr = atrs[i];
-            if (lengthPerLines[i+1] < String(data[atr] ?? "").length) {
-                lengthPerLines[i+1] = String(data[atr] ?? "").length;
+            if (lengthPerLines[i+1] < truncate(data[atr], maxLength).length) {
+                lengthPerLines[i+1] = truncate(data[atr], maxLength).length;
             }
         }
     }
@@ -70,11 +107,11 @@ export function printTable(obj, atrs) {
     for (const name in obj) {
         let data = obj[name];
         let string = "│ ";
-        string += `${name}${spaces(lengthPerLines[0] - name.length)} │`;
+        string += `${truncate(name, maxLength)}${spaces(lengthPerLines[0] - name.length)} │`;
 
         for (let i = 0; i < atrs.length; i++) {
             const atr = atrs[i];
-            string += ` ${data[atr]}${spaces(lengthPerLines[i+1] - String(data[atr] ?? "").length)} │`;
+            string += ` ${data[atr]}${spaces(lengthPerLines[i+1] - truncate(data[atr], maxLength).length)} │`;
         }
         printList.push(seperator);
         printList.push(string);

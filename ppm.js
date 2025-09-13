@@ -7,41 +7,14 @@ import ora from "ora";
 import chalk from "chalk";
 import { execSync } from "child_process";
 
-import { expandHomeDir, getCurrentDir, setUpFile, printTable } from "./utils.js";
+import { expandHomeDir, getCurrentDir, setUpFile, printTable, safeRemove, ensureDir } from "./utils.js";
 import { nginxSetup } from "./nginxHandeler.js";
-
-const git = simpleGit();
-
-function getRepoUrl(user, repoName, privateRepo = false) {
-    repoName = repoName.replace(".git", "");
-    const repoUrl = privateRepo ? `git@github.com:${user}/${repoName}.git` : `https://github.com/${user}/${repoName}.git`;
-    return repoUrl;
-}
-
-function ensureDir(dir) {
-    if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true, force: true });
-    }
-}
-
-async function cloneRepo(cloneDir, user, repoName, privateRepo) {
-    const spinner = ora(`Cloning ${repoName}...`).start();
-    try {
-        const url = getRepoUrl(user, repoName, privateRepo);
-        ensureDir(cloneDir);
-        await git.clone(url, cloneDir);
-        spinner.succeed(`Cloned ${repoName}!`);
-    } catch (err) {
-        spinner.fail("Failed to clone");
-        console.error(chalk.red(err));
-        return;
-    }
-}
+import { cloneRepo, gitPullRepo } from "./gitHandeler.js";
 
 function getPackageJson(dir) {
     const packagePath = path.join(dir, "package.json");
     if (!fs.existsSync(packagePath)) {
-        console.error("No package.json was found! Can't continue.");
+        console.error(chalk.orange("No package.json was found! Can't continue."));
         return;
     }
 
@@ -68,7 +41,7 @@ function moveFilesToInstallPath(installPath, tempDir) {
         spinner.succeed(`Moved files to : ${installPath}`);
     } catch (err) {
         spinner.fail("Failed to move files");
-        console.error(chalk.red(err));
+        console.error(chalk.orange(err));
         return;
     }
 }
@@ -90,7 +63,7 @@ function installDependancies(installPath) {
         spinner.succeed("Dependencies installed");
     } catch (err) {
         spinner.fail("npm install failed");
-        console.error(chalk.red(err));
+        console.error(chalk.orange(err));
         return;
     }
 }
@@ -109,7 +82,19 @@ function addPackageData(pkg, installPath) {
         }
         fs.writeFileSync(packageDataPath, JSON.stringify(packageData, null, 2));
     } catch (err) {
-        console.error(chalk.red(err));
+        console.error(chalk.orange(err));
+        return;
+    }
+}
+
+function removePackageData(packageName) {
+    try {
+        const packageDataPath = path.join(getCurrentDir(), "packageData.json");
+        const packageData = JSON.parse(fs.readFileSync(packageDataPath));
+        delete packageData[packageName];
+        fs.writeFileSync(packageDataPath, JSON.stringify(packageData, null, 2));
+    } catch (err) {
+        console.error(chalk.orange(err));
         return;
     }
 }
@@ -118,9 +103,7 @@ async function installPackage(user, repoName, privateRepo) {
     repoName = repoName.replace(".git", "");
     const spinner = ora(`Installing package: ${repoName}`).start();
     const tempDir = path.join(getCurrentDir(), "tempPackages", repoName);
-    if (fs.existsSync(tempDir)) {
-        fs.rmSync(tempDir, { recursive: true, force: true });
-    }
+    safeRemove(tempDir);
 
     try {
         ensureDir(tempDir);
@@ -134,18 +117,61 @@ async function installPackage(user, repoName, privateRepo) {
         addPackageData(pkg, installPath);
         spinner.succeed(`Installed package: ${packageName}`)
     } catch (err) {
-        if (fs.existsSync(tempDir)) {
-            fs.rmSync(tempDir, { recursive: true, force: true });
-        }
+        safeRemove(tempDir);
 
         if (installPath) {
-            if (fs.existsSync(installPath)) {
-                fs.rmSync(installPath, { recursive: true, force: true });
-            }
+            safeRemove(installPath);
         }
 
         spinner.fail("Failed to install.");
-        console.error(chalk.red(err));
+        console.error(err);
+        return;
+    }
+}
+
+function uninstallPackage(packageName) {
+    const packageDataPath = path.join(getCurrentDir(), "packageData.json");
+    const packageData = JSON.parse(fs.readFileSync(packageDataPath));
+
+    const pkg = packageData[packageName];
+    if (!pkg) {
+        console.error(chalk.orange(`Package ${packageName} was not found`));
+        return;
+    }
+
+    const spinner = ora(`Uninstalling package: ${packageName}...`).start();
+    try {
+        safeRemove(pkg.installPath);
+        removePackageData(packageName);
+        spinner.succeed(`Uninstalled package: ${packageName}`);
+    } catch (err) {
+        spinner.fail("Failed to uninstall.");
+        console.error(err);
+        return;
+    }
+}
+
+async function updatePackage(packageName) {
+    const packageDataPath = path.join(getCurrentDir(), "packageData.json");
+    const packageData = JSON.parse(fs.readFileSync(packageDataPath));
+
+    const pkg = packageData[packageName];
+    if (!pkg) {
+        console.error(chalk.orange(`Package ${packageName} was not found`));
+        return;
+    }
+
+    const spinner = ora(`Updating package: ${packageName}...`).start();
+    try {
+        await gitPullRepo(pkg.installPath);
+        removePackageData(packageName);
+        const pkgJson = getPackageJson(pkg.installPath);
+        addPackageData(pkgJson, pkg.installPath);
+        console.log(chalk.green(`Version ${pkg.version} -> ${pkgJson.version}`));
+        spinner.succeed(`Updated package: ${packageName}`);
+    } catch (err) {
+        spinner.fail("Failed to update.");
+        console.error(err);
         return;
     }
 }
@@ -177,25 +203,47 @@ export async function main() {
         const repoName = args._[2];
         const privateRepo = args.p || args.private;
         if (!user) {
-            console.error(chalk.red("No user was provided"));
+            console.error(chalk.orange("No user was provided"));
             return;
         }
         if (!repoName) {
-            console.error(chalk.red("No repository name was provided"));
+            console.error(chalk.orange("No repository name was provided"));
             return;
         }
 
         await installPackage(user, repoName, privateRepo);
         return;
     }
+    if (command == "uninstall") {
+        const packageName = args._[1];
+        if (!packageName) {
+            console.error(chalk.orange("No package name was provided"));
+            return;
+        }
+
+        uninstallPackage(packageName);
+        return;
+    }
+    if (command == "update") {
+        const packageName = args._[1];
+        if (!packageName) {
+            console.error(chalk.orange("No package name was provided"));
+            return;
+        }
+
+        updatePackage(packageName);
+        return;
+    }
     if (command == "list") {
         const packageData = JSON.parse(fs.readFileSync(packageDataPath));
-        printTable(packageData, ["version", "description", "installPath"]);
+        printTable(packageData, ["version", "description", "installPath"], 40);
         return;
     }
     if (command == "help" || command == "h" || command == "?" || !command) {
         console.log(chalk.cyan("Commands: "));
         console.log("sudo ppm", chalk.cyan("install"), "<username/orginisation> <Repository name> (-p for private repos)");
+        console.log("sudo ppm", chalk.cyan("uninstall"), "<Package name>");
+        console.log("sudo ppm", chalk.cyan("update"), "<Package name>");
         console.log("sudo ppm", chalk.cyan("list"));
         return;
     }
