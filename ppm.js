@@ -32,7 +32,7 @@ function getAndCreateInstallPath(pkg, packageName) {
         ensureDir(installPath);
         if (!isDirEmpty(installPath)) {
             installPath = undefined;
-            new Error("Install path not empty");
+            throw new Error("Install path not empty");
         }
         return installPath;
     } catch (err) {
