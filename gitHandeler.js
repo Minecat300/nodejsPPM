@@ -15,10 +15,18 @@ function getRepoUrl(user, repoName, privateRepo = false) {
 export async function cloneRepo(cloneDir, user, repoName, privateRepo) {
     const git = simpleGit();
     const spinner = ora(`Cloning ${repoName}...`).start();
+    const url = getRepoUrl(user, repoName, privateRepo);
+    ensureDir(cloneDir);
+
+    await git.listRemote([url]);
+    const clonePromise = git.clone(url, cloneDir);
+
+    const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Clone timed out")), 30000)
+    );
+    
     try {
-        const url = getRepoUrl(user, repoName, privateRepo);
-        ensureDir(cloneDir);
-        await git.clone(url, cloneDir);
+        await Promise.race([clonePromise, timeoutPromise]);
         spinner.succeed(`Cloned ${repoName}!`);
     } catch (err) {
         spinner.fail("Failed to clone");
