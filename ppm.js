@@ -7,7 +7,7 @@ import ora from "ora";
 import chalk from "chalk";
 import { execSync } from "child_process";
 
-import { expandHomeDir, getCurrentDir, setUpFile } from "./utils.js";
+import { expandHomeDir, getCurrentDir, setUpFile, printTable } from "./utils.js";
 import { nginxSetup } from "./nginxHandeler.js";
 
 const git = simpleGit();
@@ -168,6 +168,8 @@ export async function main() {
         boolean: ['p', 'private']
     });
 
+    const packageDataPath = path.join(getCurrentDir(), "packageData.json");
+
     const command = args._[0];
 
     if (command == "install") {
@@ -186,5 +188,16 @@ export async function main() {
         await installPackage(user, repoName, privateRepo);
         return;
     }
-    console.log(chalk.cyan("no command provided"));
+    if (command == "list") {
+        const packageData = JSON.parse(fs.readFileSync(packageDataPath));
+        printTable(packageData, ["version", "description", "installPath"]);
+        return;
+    }
+    if (command == "help" || command == "h" || command == "?" || !command) {
+        console.log(chalk.cyan("Commands: "));
+        console.log("sudo ppm", chalk.cyan("install"), "<username/orginisation> <Repository name> (-p for private repos)");
+        console.log("sudo ppm", chalk.cyan("list"));
+        return;
+    }
+
 }
