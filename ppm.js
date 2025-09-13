@@ -11,6 +11,8 @@ import { expandHomeDir, getCurrentDir, setUpFile, printTable, safeRemove, ensure
 import { nginxSetup } from "./nginxHandeler.js";
 import { cloneRepo, gitPullRepo } from "./gitHandeler.js";
 
+chalk.orange = chalk.rgb(255, 165, 0);
+
 function getPackageJson(dir) {
     const packagePath = path.join(dir, "package.json");
     if (!fs.existsSync(packagePath)) {
