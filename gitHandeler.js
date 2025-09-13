@@ -26,7 +26,7 @@ export async function cloneRepo(cloneDir, user, repoName, privateRepo) {
     }
 }
 
-export async function getRepoUrl(repoPath) {
+export async function getRepoUrlFromPath(repoPath) {
     const git = simpleGit(repoPath);
     try {
         const remotes = await git.getRemotes(true);
@@ -44,7 +44,7 @@ export async function getRepoUrl(repoPath) {
 }
 
 export async function gitPullRepo(path) {
-    const repoUrl = getRepoUrl(path) ?? "Not found";
+    const repoUrl = getRepoUrlFromPath(path) ?? "Not found";
     const git = simpleGit(path);
     const spinner = ora(`Pulling from ${repoUrl}`).start();
     try {
