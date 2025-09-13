@@ -17,37 +17,39 @@ export async function cloneRepo(cloneDir, user, repoName, privateRepo) {
     const spinner = ora(`Cloning ${repoName}...`).start();
     const url = getRepoUrl(user, repoName, privateRepo);
 
-    return new Promise((resolve, reject) => {
-        const gitProcess = spawn("git", ["clone", url, cloneDir], { stdio: "pipe" });
+    try {
+        await new Promise((resolve, reject) => {
+            const gitProcess = spawn("git", ["clone", url, cloneDir], { stdio: "pipe" });
+            let stderr = "";
 
-        let stderr = "";
-        gitProcess.stderr.on("data", (data) => {
-            stderr += data.toString();
+            gitProcess.stderr.on("data", (data) => {
+                stderr += data.toString();
+            });
+
+            // Timeout after 30 seconds
+            const timeout = setTimeout(() => {
+                gitProcess.kill();
+                reject(new Error("Clone timed out"));
+            }, 30000);
+
+            gitProcess.on("exit", (code) => {
+                clearTimeout(timeout);
+                if (code === 0) resolve();
+                else reject(new Error(stderr || `Git clone failed with exit code ${code}`));
+            });
+
+            gitProcess.on("error", (err) => {
+                clearTimeout(timeout);
+                reject(err);
+            });
         });
 
-        const timeout = setTimeout(() => {
-            gitProcess.kill();
-            spinner.fail(`Failed to clone ${repoName}: timed out`);
-            reject(new Error("Clone timed out"));
-        }, 30000);
-
-        gitProcess.on("exit", (code) => {
-            clearTimeout(timeout);
-            if (code === 0) {
-                spinner.succeed(`Cloned ${repoName}!`);
-                resolve();
-            } else {
-                spinner.fail(`Failed to clone ${repoName} (exit code ${code})`);
-                reject(new Error(stderr || `Git clone failed with exit code ${code}`));
-            }
-        });
-
-        gitProcess.on("error", (err) => {
-            clearTimeout(timeout);
-            spinner.fail(`Failed to clone ${repoName}`);
-            reject(err);
-        });
-    });
+        spinner.succeed(`Cloned ${repoName}!`);
+    } catch (err) {
+        spinner.fail(`Failed to clone ${repoName}`);
+        console.error(chalk.orange(err.message));
+        throw err;
+    }
 }
 
 export async function getRepoUrlFromPath(repoPath) {
