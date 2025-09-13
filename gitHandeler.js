@@ -1,3 +1,4 @@
+import { spawn } from "child_process";
 import simpleGit from "simple-git";
 import ora from "ora";
 import chalk from "chalk";
@@ -13,26 +14,35 @@ function getRepoUrl(user, repoName, privateRepo = false) {
 }
 
 export async function cloneRepo(cloneDir, user, repoName, privateRepo) {
-    const git = simpleGit();
     const spinner = ora(`Cloning ${repoName}...`).start();
     const url = getRepoUrl(user, repoName, privateRepo);
-    ensureDir(cloneDir);
 
-    await git.listRemote([url]);
-    const clonePromise = git.clone(url, cloneDir);
+    return new Promise((resolve, reject) => {
+        const gitProcess = spawn("git", ["clone", url, cloneDir], { stdio: "inherit" });
 
-    const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Clone timed out")), 30000)
-    );
-    
-    try {
-        await Promise.race([clonePromise, timeoutPromise]);
-        spinner.succeed(`Cloned ${repoName}!`);
-    } catch (err) {
-        spinner.fail("Failed to clone");
-        console.error(chalk.orange(err));
-        return;
-    }
+        const timeout = setTimeout(() => {
+            gitProcess.kill();
+            spinner.fail(`Failed to clone ${repoName}: timed out`);
+            reject(new Error("Clone timed out"));
+        }, 30000);
+
+        gitProcess.on("exit", (code) => {
+            clearTimeout(timeout);
+            if (code === 0) {
+                spinner.succeed(`Cloned ${repoName}!`);
+                resolve();
+            } else {
+                spinner.fail(`Failed to clone ${repoName} (exit code ${code})`);
+                reject(new Error(`Git clone failed with exit code ${code}`));
+            }
+        });
+
+        gitProcess.on("error", (err) => {
+            clearTimeout(timeout);
+            spinner.fail(`Failed to clone ${repoName}`);
+            reject(err);
+        });
+    });
 }
 
 export async function getRepoUrlFromPath(repoPath) {
