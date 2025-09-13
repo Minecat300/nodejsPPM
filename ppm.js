@@ -44,7 +44,7 @@ function moveFilesToInstallPath(installPath, tempDir) {
     } catch (err) {
         spinner.fail("Failed to move files");
         console.error(chalk.orange(err));
-        return;
+        throw err;
     }
 }
 
@@ -66,7 +66,7 @@ function installDependancies(installPath) {
     } catch (err) {
         spinner.fail("npm install failed");
         console.error(chalk.orange(err));
-        return;
+        throw err;
     }
 }
 
@@ -85,7 +85,7 @@ function addPackageData(pkg, installPath) {
         fs.writeFileSync(packageDataPath, JSON.stringify(packageData, null, 2));
     } catch (err) {
         console.error(chalk.orange(err));
-        return;
+        throw err;
     }
 }
 
@@ -97,7 +97,7 @@ function removePackageData(packageName) {
         fs.writeFileSync(packageDataPath, JSON.stringify(packageData, null, 2));
     } catch (err) {
         console.error(chalk.orange(err));
-        return;
+        throw err;
     }
 }
 
@@ -129,7 +129,7 @@ async function installPackage(user, repoName, privateRepo) {
 
         spinner.fail("Failed to install.");
         console.error(err);
-        return;
+        throw err;
     }
 }
 
@@ -151,7 +151,7 @@ function uninstallPackage(packageName) {
     } catch (err) {
         spinner.fail("Failed to uninstall.");
         console.error(err);
-        return;
+        throw err;
     }
 }
 
@@ -177,7 +177,7 @@ async function updatePackage(packageName) {
     } catch (err) {
         spinner.fail("Failed to update.");
         console.error(err);
-        return;
+        throw err;
     }
 }
 

@@ -65,7 +65,7 @@ export async function getRepoUrlFromPath(repoPath) {
         }
     } catch (err) {
         console.error(chalk.orange("Failed to get remote URL:"), chalk.orange(err));
-        return null;
+        throw err;
     }
 }
 
@@ -79,6 +79,6 @@ export async function gitPullRepo(path) {
     } catch (err) {
         spinner.fail(`Failed to pull from ${repoUrl}`);
         console.error(chalk.orange(err));
-        return;
+        throw err;
     }
 }
