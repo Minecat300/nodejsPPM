@@ -7,7 +7,7 @@ import ora from "ora";
 import chalk from "chalk";
 import { execSync } from "child_process";
 
-import { expandHomeDir, getCurrentDir, setUpFile, printTable, safeRemove, ensureDir } from "./utils.js";
+import { expandHomeDir, getCurrentDir, setUpFile, printTable, safeRemove, ensureDir, isDirEmpty } from "./utils.js";
 import { nginxSetup } from "./nginxHandeler.js";
 import { cloneRepo, gitPullRepo } from "./gitHandeler.js";
 
@@ -25,10 +25,14 @@ function getPackageJson(dir) {
 }
 
 function getAndCreateInstallPath(pkg, packageName) {
-    const installPath = pkg.installPath
+    let installPath = pkg.installPath
         ? path.resolve(process.cwd(), expandHomeDir(pkg.installPath))
         : path.join(process.cwd(), packageName);
     ensureDir(installPath);
+    if (!isDirEmpty(installPath)) {
+        installPath = undefined;
+        throw chalk.orange("Install path not empty");
+    }
     return installPath;
 }
 

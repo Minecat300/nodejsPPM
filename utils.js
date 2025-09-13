@@ -66,6 +66,12 @@ export function safeRemove(targetPath) {
     fs.rmSync(resolved, { recursive: true, force: true });
 }
 
+export function isDirEmpty(dirPath) {
+    if (!fs.existsSync(dirPath)) return true;
+    const files = fs.readdirSync(dirPath);
+    return files.length === 0;
+}
+
 function spaces(num) {
     return " ".repeat(num);
 }
