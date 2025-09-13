@@ -25,15 +25,20 @@ function getPackageJson(dir) {
 }
 
 function getAndCreateInstallPath(pkg, packageName) {
-    let installPath = pkg.installPath
-        ? path.resolve(process.cwd(), expandHomeDir(pkg.installPath))
-        : path.join(process.cwd(), packageName);
-    ensureDir(installPath);
-    if (!isDirEmpty(installPath)) {
-        installPath = undefined;
-        console.error(chalk.orange("Install path not empty"));
+    try {
+        let installPath = pkg.installPath
+            ? path.resolve(process.cwd(), expandHomeDir(pkg.installPath))
+            : path.join(process.cwd(), packageName);
+        ensureDir(installPath);
+        if (!isDirEmpty(installPath)) {
+            installPath = undefined;
+            new Error("Install path not empty");
+        }
+        return installPath;
+    } catch (err) {
+        console.error(chalk.orange(err));
+        throw err;
     }
-    return installPath;
 }
 
 function moveFilesToInstallPath(installPath, tempDir) {
