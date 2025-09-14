@@ -34,7 +34,7 @@ server {
     listen 80;
     server_name ${serverConfigValues.urls.join(" ")};
 
-    return 301 https://$host$request_uri
+    return 301 https://$host$request_uri;
 }
 
 `.trim();
@@ -110,6 +110,9 @@ server {
             execSync(`ln -s ${serverNginxPath} ${enabledPath}`);
         }
     }
+    fullConfig += `
+}
+    `
     if (reload) {
         execSync(`systemctl reload nginx`);
     }
