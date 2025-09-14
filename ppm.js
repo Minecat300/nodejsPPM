@@ -24,16 +24,19 @@ function getPackageJson(dir) {
     return pkg;
 }
 
-function getAndCreateInstallPath(pkg, packageName) {
+function getAndCreateInstallPath(pkg, packageName, forceInstall = false) {
     try {
         let installPath = pkg.installPath
             ? path.resolve(process.cwd(), expandHomeDir(pkg.installPath))
             : path.join(process.cwd(), packageName);
-        ensureDir(installPath);
+        if (!isDirEmpty(installPath) && forceInstall) {
+            safeRemove(installPath);
+        }
         if (!isDirEmpty(installPath)) {
             installPath = undefined;
             throw new Error("Install path not empty");
         }
+        ensureDir(installPath);
         return installPath;
     } catch (err) {
         console.error(chalk.orange(err));
@@ -110,7 +113,7 @@ function removePackageData(packageName) {
     }
 }
 
-async function installPackage(user, repoName, privateRepo) {
+async function installPackage(user, repoName, privateRepo, forceInstall) {
     repoName = repoName.replace(".git", "");
     const spinner = ora(`Installing package: ${repoName}`).start();
     const tempDir = path.join(getCurrentDir(), "tempPackages", repoName);
@@ -123,7 +126,7 @@ async function installPackage(user, repoName, privateRepo) {
         await cloneRepo(tempDir, user, repoName, privateRepo);
         const pkg = getPackageJson(tempDir);
         const packageName = pkg.name || repoName;
-        installPath = getAndCreateInstallPath(pkg, packageName);
+        installPath = getAndCreateInstallPath(pkg, packageName, forceInstall);
         moveFilesToInstallPath(installPath, tempDir);
         fixPermissions(installPath);
         installDependancies(installPath);
@@ -205,7 +208,7 @@ export function setup() {
 
 export async function main() {
     const args = minimist(process.argv.slice(2), {
-        boolean: ['p', 'private']
+        boolean: ['p', 'private', 'f', 'force']
     });
 
     const packageDataPath = path.join(getCurrentDir(), "packageData.json");
@@ -216,6 +219,7 @@ export async function main() {
         const user = args._[1];
         const repoName = args._[2];
         const privateRepo = args.p || args.private;
+        const forceInstall = args.f || args.force;
         if (!user) {
             console.error(chalk.orange("No user was provided"));
             return;
@@ -225,7 +229,7 @@ export async function main() {
             return;
         }
 
-        await installPackage(user, repoName, privateRepo);
+        await installPackage(user, repoName, privateRepo, forceInstall);
         return;
     }
     if (command == "uninstall") {
