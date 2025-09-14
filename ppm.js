@@ -2,13 +2,12 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 import minimist from "minimist";
-import simpleGit from "simple-git";
 import ora from "ora";
 import chalk from "chalk";
 import { execSync } from "child_process";
 
 import { expandHomeDir, getCurrentDir, setUpFile, printTable, safeRemove, ensureDir, isDirEmpty } from "./utils.js";
-import { nginxSetup, addServiceFromPackage } from "./nginxHandeler.js";
+import { nginxSetup, addServiceFromPackage, removeService } from "./nginxHandeler.js";
 import { cloneRepo, gitPullRepo } from "./gitHandeler.js";
 
 chalk.orange = chalk.rgb(255, 165, 0);
@@ -163,6 +162,9 @@ function uninstallPackage(packageName) {
         safeRemove(pkg.installPath);
         removePackageData(packageName);
         spinner.succeed(`Uninstalled package: ${packageName}`);
+        if (pkg.nginx) {
+            removeService(pkg.nginx.service.name);
+        }
     } catch (err) {
         spinner.fail("Failed to uninstall.");
         console.error(err);
