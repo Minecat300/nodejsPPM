@@ -13,13 +13,13 @@ function getRepoUrl(user, repoName, privateRepo = false) {
     return repoUrl;
 }
 
-export async function cloneRepo(cloneDir, user, repoName, privateRepo) {
+export async function cloneRepo(cloneDir, user, repoName, branch = "main", privateRepo = false) {
     const spinner = ora(`Cloning ${repoName}...`).start();
     const url = getRepoUrl(user, repoName, privateRepo);
 
     try {
         await new Promise((resolve, reject) => {
-            const gitProcess = spawn("git", ["clone", url, cloneDir], { stdio: "pipe" });
+            const gitProcess = spawn("git", ["clone", "-b", branch, "--single-branch", url, cloneDir], { stdio: "pipe" });
             let stderr = "";
 
             gitProcess.stderr.on("data", (data) => {

@@ -8,7 +8,7 @@ import chalk from "chalk";
 import { execSync } from "child_process";
 
 import { expandHomeDir, getCurrentDir, setUpFile, printTable, safeRemove, ensureDir, isDirEmpty } from "./utils.js";
-import { nginxSetup } from "./nginxHandeler.js";
+import { nginxSetup, addServiceFromPackage } from "./nginxHandeler.js";
 import { cloneRepo, gitPullRepo } from "./gitHandeler.js";
 
 chalk.orange = chalk.rgb(255, 165, 0);
@@ -113,7 +113,7 @@ function removePackageData(packageName) {
     }
 }
 
-async function installPackage(user, repoName, privateRepo, forceInstall) {
+async function installPackage(user, repoName, branch, privateRepo, forceInstall) {
     repoName = repoName.replace(".git", "");
     const spinner = ora(`Installing package: ${repoName}`).start();
     const tempDir = path.join(getCurrentDir(), "tempPackages", repoName);
@@ -123,7 +123,7 @@ async function installPackage(user, repoName, privateRepo, forceInstall) {
 
     try {
         ensureDir(tempDir);
-        await cloneRepo(tempDir, user, repoName, privateRepo);
+        await cloneRepo(tempDir, user, repoName, branch, privateRepo);
         const pkg = getPackageJson(tempDir);
         const packageName = pkg.name || repoName;
         installPath = getAndCreateInstallPath(pkg, packageName, forceInstall);
@@ -131,7 +131,10 @@ async function installPackage(user, repoName, privateRepo, forceInstall) {
         fixPermissions(installPath);
         installDependancies(installPath);
         addPackageData(pkg, installPath);
-        spinner.succeed(`Installed package: ${packageName}`)
+        spinner.succeed(`Installed package: ${packageName}`);
+        if (pkg.nginx) {
+            addServiceFromPackage(pkg);
+        }
     } catch (err) {
         safeRemove(tempDir);
 
@@ -186,6 +189,9 @@ async function updatePackage(packageName) {
         addPackageData(pkgJson, pkg.installPath);
         console.log(chalk.green(`Version ${pkg.version} -> ${pkgJson.version}`));
         spinner.succeed(`Updated package: ${packageName}`);
+        if (pkgJson.nginx) {
+            addServiceFromPackage(pkgJson);
+        }
     } catch (err) {
         spinner.fail("Failed to update.");
         console.error(err);
@@ -221,6 +227,7 @@ export async function main() {
         const repoName = args._[2];
         const privateRepo = args.p || args.private;
         const forceInstall = args.f || args.force;
+        const branch = args.branch || "main";
         if (!user) {
             console.error(chalk.orange("No user was provided"));
             return;
@@ -230,7 +237,7 @@ export async function main() {
             return;
         }
 
-        await installPackage(user, repoName, privateRepo, forceInstall);
+        await installPackage(user, repoName, branch, privateRepo, forceInstall);
         return;
     }
     if (command == "uninstall") {

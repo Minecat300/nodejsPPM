@@ -1,7 +1,11 @@
 import fs from "fs";
 import path from "path";
 import { execSync } from "child_process";
-import { setUpFile, getCurrentDir } from "./utils.js";
+import chalk from "chalk";
+
+import { setUpFile, getCurrentDir, joinPreservedArrays } from "./utils.js";
+
+chalk.orange = chalk.rgb(255, 165, 0);
 
 export function nginxSetup() {
     const servicePath = path.join(getCurrentDir(), "nginxServiceConfig.json");
@@ -121,11 +125,11 @@ export function updateNginxConfig(reload = true) {
 
 export function addNewService(name, port, uri, https = true, servers, updateConfig = true) {
     if (!name || !port || !uri || !servers) {
-        console.error("Missing inputs");
+        console.error(chalk.orange("Missing inputs"));
         return;
     }
     if (typeof port !== "number") {
-        console.error("Port must be a number");
+        console.error(chalk.orange("Port must be a number"));
         return;
     }
 
@@ -133,7 +137,7 @@ export function addNewService(name, port, uri, https = true, servers, updateConf
     const serviceConfigJson = JSON.parse(fs.readFileSync(serviceConfigPath, "utf8"));
 
     if (serviceConfigJson[name]) {
-        console.warn(`Service "${name}" already exists. Overwriting.`);
+        console.warn(chalk.yellow(`Service "${name}" already exists. Overwriting.`));
     }
 
     serviceConfigJson[name] = {
@@ -150,7 +154,7 @@ export function addNewService(name, port, uri, https = true, servers, updateConf
 
 export function removeService(name, updateConfig = true) {
     if (!name) {
-        console.error("Missing input");
+        console.error(chalk.orange("Missing input"));
         return;
     }
     const serviceConfigPath = path.join(getCurrentDir(), "nginxServiceConfig.json");
@@ -164,7 +168,7 @@ export function removeService(name, updateConfig = true) {
 
 export function addNewServer(name, urls, certificate, certificateKey, updateConfig = true) {
     if (!name || !urls || !certificate || ! certificateKey) {
-        console.error("Missing inputs");
+        console.error(chalk.orange("Missing inputs"));
         return;
     }
 
@@ -172,11 +176,13 @@ export function addNewServer(name, urls, certificate, certificateKey, updateConf
     const serverConfigJson = JSON.parse(fs.readFileSync(serverConfigPath, "utf8"));
 
     if (serverConfigJson[name]) {
-        console.warn(`Server "${name}" already exists. Overwriting.`);
+        console.warn(chalk.yellow(`Server "${name}" already exists. Overwriting.`));
     }
 
+    const newUrls = joinPreservedArrays(serverConfigJson[name]?.urls ?? [], urls)
+
     serverConfigJson[name] = {
-        urls,
+        urls: newUrls,
         certificate,
         certificateKey
     };
@@ -188,7 +194,7 @@ export function addNewServer(name, urls, certificate, certificateKey, updateConf
 
 export function removeServer(name, updateConfig = true) {
     if(!name) {
-        console.error("Missing input");
+        console.error(chalk.orange("Missing input"));
         return;
     }
     const serverConfigPath = path.join(getCurrentDir(), "nginxServerConfig.json");
@@ -210,4 +216,27 @@ export function removeServer(name, updateConfig = true) {
     if (updateConfig) {
         updateNginxConfig();
     }
+}
+
+export function addServiceFromPackage(pkg, updateConfig = true) {
+    if (!pkg.nginx) {
+        console.error(chalk.orange("Nginx config missing"));
+        return;
+    }
+    const nginx = pkg.nginx;
+    if (!nginx.service) {
+        console.error(chalk.orange("service missing"));
+        return;
+    }
+    const service = nginx.service;
+    for (const server of service.servers) {
+        if (!nginx[server]) {
+            console.error(chalk.orange("Server('s) missing"));
+            return;
+        }
+    }
+    for (const server of service.servers) {
+        addNewServer(server, server.urls, server.certificate, server.certificateKey, false);
+    }
+    addNewService(service.name, service.port, service.uri, service.https, service.servers, updateConfig);
 }

@@ -72,6 +72,15 @@ export function isDirEmpty(dirPath) {
     return files.length === 0;
 }
 
+export function joinPreservedArrays(array1 = [], array2 = []) {
+    array2.forEach(item => {
+        if (!array1.includes(item)) {
+            array1.push(item);
+        }
+    });
+    return array1;
+}
+
 function spaces(num) {
     return " ".repeat(num);
 }
