@@ -10,10 +10,10 @@ chalk.orange = chalk.rgb(255, 165, 0);
 export function nginxSetup() {
     const servicePath = path.join(getCurrentDir(), "nginxServiceConfig.json");
     const serverPath = path.join(getCurrentDir(), "nginxServerConfig.json");
-    if (fs.existsSync(servicePath)) {
+    if (!fs.existsSync(servicePath)) {
         setUpFile(servicePath, "{}");
     }
-    if (fs.existsSync(serverPath)) {
+    if (!fs.existsSync(serverPath)) {
         setUpFile(serverPath, "{}");
     }
 }
