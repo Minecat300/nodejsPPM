@@ -196,12 +196,13 @@ async function updatePackage(packageName) {
 export function setup() {
     const packageDataPath = path.join(getCurrentDir(), "packageData.json");
     if (fs.existsSync(packageDataPath)) return;
+    const pkg = getPackageJson(getCurrentDir());
     nginxSetup();
     setUpFile(packageDataPath, JSON.stringify({
-        "project-package-manager": {
-            version: "1.0.0",
+        [pkg.name]: {
+            version: pkg.version,
             installPath: getCurrentDir(),
-            description: "Handles the packages for projects."
+            description: pkg.description
         }
     }, null, 2));
 }
