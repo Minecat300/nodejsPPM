@@ -236,7 +236,8 @@ export function addServiceFromPackage(pkg, updateConfig = true) {
         }
     }
     for (const server of service.servers) {
-        addNewServer(server, server.urls, server.certificate, server.certificateKey, false);
+        const serverData = nginx[server];
+        addNewServer(server, serverData.urls, serverData.certificate, serverData.certificateKey, false);
     }
     addNewService(service.name, service.port, service.uri, service.https, service.servers, updateConfig);
 }
