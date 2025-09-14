@@ -73,7 +73,7 @@ server {
 `
         for (const service in serviceConfigJson) {
             const serviceConfigValues = serviceConfigJson[service];
-            if (!serviceConfigValues.servers.contains(server)) continue;
+            if (!serviceConfigValues.servers.includes(server)) continue;
 
             const httpType = serviceConfigValues.https ? "https" : "http";
             fullConfig += `
