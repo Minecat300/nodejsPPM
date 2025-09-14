@@ -124,8 +124,20 @@ export function updateNginxConfig(reload = true) {
 }
 
 export function addNewService(name, port, uri, https = true, servers, updateConfig = true) {
-    if (!name || !port || !uri || !servers) {
-        console.error(chalk.orange("Missing inputs"));
+    if (!name) {
+        console.error(chalk.orange("Name missing"));
+        return;
+    }
+    if (!port) {
+        console.error(chalk.orange("Port missing"));
+        return;
+    }
+    if (!uri) {
+        console.error(chalk.orange("Uri missing"));
+        return;
+    }
+    if (!servers) {
+        console.error(chalk.orange("Servers missing"));
         return;
     }
     if (typeof port !== "number") {
@@ -154,7 +166,7 @@ export function addNewService(name, port, uri, https = true, servers, updateConf
 
 export function removeService(name, updateConfig = true) {
     if (!name) {
-        console.error(chalk.orange("Missing input"));
+        console.error(chalk.orange("Name missing"));
         return;
     }
     const serviceConfigPath = path.join(getCurrentDir(), "nginxServiceConfig.json");
@@ -167,8 +179,20 @@ export function removeService(name, updateConfig = true) {
 }
 
 export function addNewServer(name, urls, certificate, certificateKey, updateConfig = true) {
-    if (!name || !urls || !certificate || ! certificateKey) {
-        console.error(chalk.orange("Missing inputs"));
+    if (!name) {
+        console.error(chalk.orange("name missing"));
+        return;
+    }
+    if (!urls) {
+        console.error(chalk.orange("urls missing"));
+        return;
+    }
+    if (!certificate) {
+        console.error(chalk.orange("certificate missing"));
+        return;
+    }
+    if (!certificateKey) {
+        console.error(chalk.orange("certificate key missing"));
         return;
     }
 
@@ -194,7 +218,7 @@ export function addNewServer(name, urls, certificate, certificateKey, updateConf
 
 export function removeServer(name, updateConfig = true) {
     if(!name) {
-        console.error(chalk.orange("Missing input"));
+        console.error(chalk.orange("Name missing"));
         return;
     }
     const serverConfigPath = path.join(getCurrentDir(), "nginxServerConfig.json");
