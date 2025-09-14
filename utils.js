@@ -81,6 +81,10 @@ export function joinPreservedArrays(array1 = [], array2 = []) {
     return array1;
 }
 
+export function isBlank(str) {
+    return typeof str !== "string" || str.trim() === "";
+}
+
 function spaces(num) {
     return " ".repeat(num);
 }

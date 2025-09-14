@@ -3,7 +3,7 @@ import path from "path";
 import { execSync } from "child_process";
 import chalk from "chalk";
 
-import { setUpFile, getCurrentDir, joinPreservedArrays } from "./utils.js";
+import { setUpFile, getCurrentDir, joinPreservedArrays, isBlank } from "./utils.js";
 
 chalk.orange = chalk.rgb(255, 165, 0);
 
@@ -124,24 +124,24 @@ export function updateNginxConfig(reload = true) {
 }
 
 export function addNewService(name, port, uri, https = true, servers, updateConfig = true) {
-    if (!name) {
+    if (isBlank(name)) {
         console.error(chalk.orange("Name missing"));
         return;
     }
-    if (!port) {
+    if (port === undefined || port === null) {
         console.error(chalk.orange("Port missing"));
-        return;
-    }
-    if (!uri) {
-        console.error(chalk.orange("Uri missing"));
-        return;
-    }
-    if (!servers) {
-        console.error(chalk.orange("Servers missing"));
         return;
     }
     if (typeof port !== "number") {
         console.error(chalk.orange("Port must be a number"));
+        return;
+    }
+    if (uri === undefined || uri === null) {
+        console.error(chalk.orange("Uri missing"));
+        return;
+    }
+    if (!Array.isArray(servers) || servers.length === 0) {
+        console.error(chalk.orange("Servers missing"));
         return;
     }
 
@@ -179,19 +179,19 @@ export function removeService(name, updateConfig = true) {
 }
 
 export function addNewServer(name, urls, certificate, certificateKey, updateConfig = true) {
-    if (!name) {
+    if (isBlank(name)) {
         console.error(chalk.orange("name missing"));
         return;
     }
-    if (!urls) {
+    if (!Array.isArray(urls) || urls.length === 0) {
         console.error(chalk.orange("urls missing"));
         return;
     }
-    if (!certificate) {
+    if (isBlank(certificate)) {
         console.error(chalk.orange("certificate missing"));
         return;
     }
-    if (!certificateKey) {
+    if (isBlank(certificateKey)) {
         console.error(chalk.orange("certificate key missing"));
         return;
     }
