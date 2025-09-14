@@ -207,7 +207,7 @@ function runPackage(packageName) {
         const packageData = JSON.parse(fs.readFileSync(packageDataPath));
         const pkg = getPackageJson(packageData[packageName].installPath);
         const script = pkg.scripts.start;
-        execSync(script);
+        execSync(script, { cwd: packageData[packageName].installPath,  stdio: "inherit" });
     } catch (err) {
         console.error(err);
         throw err;
