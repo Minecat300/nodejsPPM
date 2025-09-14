@@ -260,7 +260,7 @@ export async function main() {
     }
     if (command == "help" || command == "h" || command == "?" || !command) {
         console.log(chalk.cyan("Commands: "));
-        console.log("sudo ppm", chalk.cyan("install"), "<username/orginisation> <Repository name> (--private, -p for private repos, --force, -f for force install)");
+        console.log("sudo ppm", chalk.cyan("install"), "<username/orginisation> <Repository name> [--private, -p] [--force, -f]");
         console.log("sudo ppm", chalk.cyan("uninstall"), "<Package name>");
         console.log("sudo ppm", chalk.cyan("update"), "<Package name>");
         console.log("sudo ppm", chalk.cyan("list"));
