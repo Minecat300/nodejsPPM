@@ -201,6 +201,19 @@ async function updatePackage(packageName) {
     }
 }
 
+function runPackage(packageName) {
+    try {
+        const packageDataPath = path.join(getCurrentDir(), "packageData.json");
+        const packageData = JSON.parse(fs.readFileSync(packageDataPath));
+        const pkg = getPackageJson(packageData[packageName].installPath);
+        const script = pkg.scripts.start;
+        execSync(script);
+    } catch (err) {
+        console.error(err);
+        throw err;
+    }
+}
+
 export function setup() {
     const packageDataPath = path.join(getCurrentDir(), "packageData.json");
     if (fs.existsSync(packageDataPath)) return;
@@ -262,6 +275,16 @@ export async function main() {
         updatePackage(packageName);
         return;
     }
+    if (command == "run") {
+        const packageName = args._[1];
+        if (!packageName) {
+            console.error(chalk.orange("No package name was provided"));
+            return;
+        }
+
+        runPackage(packageName);
+        return;
+    }
     if (command == "list") {
         const packageData = JSON.parse(fs.readFileSync(packageDataPath));
         printTable(packageData, ["version", "description", "installPath"], 40);
@@ -272,8 +295,9 @@ export async function main() {
         console.log("sudo ppm", chalk.cyan("install"), "<username/orginisation> <Repository name> [--private, -p] [--force, -f]");
         console.log("sudo ppm", chalk.cyan("uninstall"), "<Package name>");
         console.log("sudo ppm", chalk.cyan("update"), "<Package name>");
+        console.log("sudo ppm", chalk.cyan("run"), "<Package name>");
         console.log("sudo ppm", chalk.cyan("list"));
         return;
     }
-
+    console.log(chalk.cyan('Unknown Command. "ppm help" for help'));
 }
