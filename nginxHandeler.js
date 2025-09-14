@@ -103,6 +103,9 @@ server {
 
 `
         }
+        fullConfig += `
+}
+`
         fs.writeFileSync(serverNginxPath, fullConfig.trim());
 
         const enabledPath = `/etc/nginx/sites-enabled/https${server}`;
@@ -110,9 +113,6 @@ server {
             execSync(`ln -s ${serverNginxPath} ${enabledPath}`);
         }
     }
-    fullConfig += `
-}
-    `
     if (reload) {
         execSync(`systemctl reload nginx`);
     }
