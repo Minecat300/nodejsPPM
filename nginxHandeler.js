@@ -232,8 +232,10 @@ export function removeServer(name, updateConfig = true) {
         return;
     }
 
-    safeRemove(`/etc/nginx/sites-available/http${name}`);
-    safeRemove(`/etc/nginx/sites-available/https${name}`);
+    fs.rmSync(`/etc/nginx/sites-available/http${name}`);
+    fs.rmSync(`/etc/nginx/sites-available/https${name}`);
+    fs.rmSync(`/etc/nginx/sites-enabled/http${name}`);
+    fs.rmSync(`/etc/nginx/sites-enabled/https${name}`);
 
     for (const service in serviceConfigJson) {
         const serviceConfigValues = serviceConfigJson[service];
