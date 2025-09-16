@@ -259,7 +259,7 @@ function nginxCommands(command, args) {
         const spinner = ora("Reloading Nginx config...").start();
         try {
             updateNginxConfig();
-            spinner("Reloaded Nginx");
+            spinner.succeed("Reloaded Nginx");
         } catch (err) {
             spinner.fail("Failed to reload nginx confix");
             console.error(chalk.orange(err));
