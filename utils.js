@@ -93,6 +93,7 @@ export function prependToKeyValue(obj, targetKey, prefix) {
 }
 
 export function stringToArray(str) {
+    if (!str) {return [];}
     return str.split(",");
 }
 
