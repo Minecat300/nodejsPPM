@@ -6,7 +6,7 @@ import ora from "ora";
 import chalk from "chalk";
 import { execSync } from "child_process";
 
-import { expandHomeDir, getCurrentDir, setUpFile, printTable, safeRemove, ensureDir, isDirEmpty, prependToKeyValuen, stringToArray } from "./utils.js";
+import { expandHomeDir, getCurrentDir, setUpFile, printTable, safeRemove, ensureDir, isDirEmpty, prependToKeyValue, stringToArray } from "./utils.js";
 import { nginxSetup, addServiceFromPackage, removeService, removeServer, addNewService, addNewServer, updateNginxConfig } from "./nginxHandeler.js";
 import { cloneRepo, gitPullRepo } from "./gitHandeler.js";
 
