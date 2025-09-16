@@ -214,6 +214,29 @@ function runPackage(packageName) {
     }
 }
 
+function nginxCommands(command) {
+    const serviceConfigPath = path.join(getCurrentDir(), "nginxServiceConfig.json");
+    const serverConfigPath = path.join(getCurrentDir(), "nginxServerConfig.json");
+
+    if (command == "listServices") {
+        const serviceConfigJson = JSON.parse(fs.readFileSync(serviceConfigPath));
+        printTable(serviceConfigJson, ["port", "uri", "https", "servers"], 30);
+        return;
+    }
+    if (command == "listServers") {
+        const serverConfigJson = JSON.parse(fs.readFileSync(serverConfigPath));
+        printTable(serverConfigJson, ["urls", "certificate", "certificateKey"], 50);
+        return;
+    }
+    if (command == "help" || command == "h" || command == "?" || !command) {
+        console.log(chalk.cyan("Nginx Commands:"));
+        console.log("sudo ppm nginx", chalk.cyan("listServices"));
+        console.log("sudo ppm nginx", chalk.cyan("listServers"));
+        return;
+    }
+    console.log(chalk.cyan('Unknown Nginx Command. "ppm nginx help" for help'));
+}
+
 export function setup() {
     const packageDataPath = path.join(getCurrentDir(), "packageData.json");
     if (fs.existsSync(packageDataPath)) return;
@@ -290,6 +313,10 @@ export async function main() {
         printTable(packageData, ["version", "description", "installPath"], 40);
         return;
     }
+    if (command == "nginx") {
+        nginxCommands(args._[1]);
+        return;
+    }
     if (command == "help" || command == "h" || command == "?" || !command) {
         console.log(chalk.cyan("Commands: "));
         console.log("sudo ppm", chalk.cyan("install"), "<username/orginisation> <Repository name> [--private, -p] [--force, -f]");
@@ -297,6 +324,7 @@ export async function main() {
         console.log("sudo ppm", chalk.cyan("update"), "<Package name>");
         console.log("sudo ppm", chalk.cyan("run"), "<Package name>");
         console.log("sudo ppm", chalk.cyan("list"));
+        console.log("sudo ppm", chalk.cyan("nginx"), "<Nginx command>");
         return;
     }
     console.log(chalk.cyan('Unknown Command. "ppm help" for help'));
