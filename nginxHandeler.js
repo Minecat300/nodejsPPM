@@ -3,9 +3,9 @@ import path from "path";
 import { execSync } from "child_process";
 import chalk from "chalk";
 
-import { setUpFile, getCurrentDir, joinPreservedArrays, isBlank } from "./utils.js";
+import { setUpFile, getCurrentDir, joinPreservedArrays, isBlank, safeRemove } from "./utils.js";
 
-chalk.orange = chalk.rgb(255, 165, 0);
+chalk.orange = chalk.rgb(255, 81, 0);
 
 export function nginxSetup() {
     const servicePath = path.join(getCurrentDir(), "nginxServiceConfig.json");
@@ -172,6 +172,10 @@ export function removeService(name, updateConfig = true) {
     }
     const serviceConfigPath = path.join(getCurrentDir(), "nginxServiceConfig.json");
     const serviceConfigJson = JSON.parse(fs.readFileSync(serviceConfigPath, "utf8"));
+    if (!serviceConfigJson[name]) {
+        console.error(chalk.orange(`${name} not found`));
+        return;
+    }
     delete serviceConfigJson[name];
     fs.writeFileSync(serviceConfigPath, JSON.stringify(serviceConfigJson, null, 2));
     updateNginxConfig(updateConfig);
@@ -214,7 +218,7 @@ export function addNewServer(name, urls, certificate, certificateKey, updateConf
 }
 
 export function removeServer(name, updateConfig = true) {
-    if(!name) {
+    if (!name) {
         console.error(chalk.orange("Name missing"));
         return;
     }
@@ -222,9 +226,18 @@ export function removeServer(name, updateConfig = true) {
     const serviceConfigPath = path.join(getCurrentDir(), "nginxServiceConfig.json");
     const serverConfigJson = JSON.parse(fs.readFileSync(serverConfigPath, "utf8"));
     const serviceConfigJson = JSON.parse(fs.readFileSync(serviceConfigPath, "utf8"));
+
+    if (!serverConfigJson[name]) {
+        console.error(chalk.orange(`${name} not found`));
+        return;
+    }
+
+    safeRemove(`/etc/nginx/sites-available/http${name}`);
+    safeRemove(`/etc/nginx/sites-available/https${name}`);
+
     for (const service in serviceConfigJson) {
         const serviceConfigValues = serviceConfigJson[service];
-        if (!serviceConfigValues.servers.contains(name)) continue;
+        if (!serviceConfigValues.servers.includes(name)) continue;
         if (serviceConfigValues.servers.length > 1) {
             serviceConfigValues.servers.splice(serviceConfigValues.servers.indexOf(name), 1);
             continue;

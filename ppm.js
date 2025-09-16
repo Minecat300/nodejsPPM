@@ -10,7 +10,7 @@ import { expandHomeDir, getCurrentDir, setUpFile, printTable, safeRemove, ensure
 import { nginxSetup, addServiceFromPackage, removeService, removeServer, addNewService, addNewServer, updateNginxConfig } from "./nginxHandeler.js";
 import { cloneRepo, gitPullRepo } from "./gitHandeler.js";
 
-chalk.orange = chalk.rgb(255, 165, 0);
+chalk.orange = chalk.rgb(255, 81, 0)
 
 function getPackageJson(dir) {
     const packagePath = path.join(dir, "package.json");

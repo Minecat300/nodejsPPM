@@ -5,7 +5,7 @@ import chalk from "chalk";
 
 import { expandHomeDir, getCurrentDir, setUpFile, printTable, safeRemove, ensureDir } from "./utils.js";
 
-chalk.orange = chalk.rgb(255, 165, 0);
+chalk.orange = chalk.rgb(255, 81, 0)
 
 function getRepoUrl(user, repoName, privateRepo = false) {
     repoName = repoName.replace(".git", "");
