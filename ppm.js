@@ -281,10 +281,10 @@ function nginxCommands(command, args) {
     }
     if (command == "help" || command == "h" || command == "?" || !command) {
         console.log(chalk.cyan("Nginx Commands:"));
-        console.log("sudo ppm nginx", chalk.cyan("addService"), "<name> <port> <uri> <servers> [--http] [--noreload, -n]");
+        console.log("sudo ppm nginx", chalk.cyan("addService"), "<name> <port> <uri> <servers>       [--http] [--noreload, -n]");
         console.log("sudo ppm nginx", chalk.cyan("addServer"), "<name> <urls> <certificate> <certificate key> [--noreload, -n]");
-        console.log("sudo ppm nginx", chalk.cyan("removeService"), "<service name> [--noreload, -n]");
-        console.log("sudo ppm nginx", chalk.cyan("removeServer"), "<server name> [--noreload, -n]");
+        console.log("sudo ppm nginx", chalk.cyan("removeService"), "<service name>                            [--noreload, -n]");
+        console.log("sudo ppm nginx", chalk.cyan("removeServer"), "<server name>                              [--noreload, -n]");
         console.log("sudo ppm nginx", chalk.cyan("reload"));
         console.log("sudo ppm nginx", chalk.cyan("listServices"));
         console.log("sudo ppm nginx", chalk.cyan("listServers"));
