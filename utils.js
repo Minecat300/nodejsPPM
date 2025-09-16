@@ -81,6 +81,17 @@ export function joinPreservedArrays(array1 = [], array2 = []) {
     return array1;
 }
 
+export function prependToKeyValue(obj, targetKey, prefix) {
+    for (const mainKey in obj) {
+        if (obj[mainKey] && typeof obj[mainKey] === "object") {
+            if (targetKey in obj[mainKey]) {
+                obj[mainKey][targetKey] = prefix + obj[mainKey][targetKey];
+            }
+        }
+    }
+    return obj;
+}
+
 export function isBlank(str) {
     return typeof str !== "string" || str.trim() === "";
 }

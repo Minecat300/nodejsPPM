@@ -6,7 +6,7 @@ import ora from "ora";
 import chalk from "chalk";
 import { execSync } from "child_process";
 
-import { expandHomeDir, getCurrentDir, setUpFile, printTable, safeRemove, ensureDir, isDirEmpty } from "./utils.js";
+import { expandHomeDir, getCurrentDir, setUpFile, printTable, safeRemove, ensureDir, isDirEmpty, prependToKeyValue } from "./utils.js";
 import { nginxSetup, addServiceFromPackage, removeService } from "./nginxHandeler.js";
 import { cloneRepo, gitPullRepo } from "./gitHandeler.js";
 
@@ -220,12 +220,14 @@ function nginxCommands(command) {
 
     if (command == "listServices") {
         const serviceConfigJson = JSON.parse(fs.readFileSync(serviceConfigPath));
-        printTable(serviceConfigJson, ["port", "uri", "https", "servers"], 30);
+        console.log(chalk.cyan("Nginx Services:"));
+        printTable(prependToKeyValue(serviceConfigJson, "uri", "/"), ["port", "uri", "https", "servers"], 30);
         return;
     }
     if (command == "listServers") {
         const serverConfigJson = JSON.parse(fs.readFileSync(serverConfigPath));
-        printTable(serverConfigJson, ["urls", "certificate", "certificateKey"], 50);
+        console.log(chalk.cyan("Nginx Servers:"));
+        printTable(serverConfigJson, ["urls", "certificate", "certificateKey"], 30);
         return;
     }
     if (command == "help" || command == "h" || command == "?" || !command) {
@@ -310,6 +312,7 @@ export async function main() {
     }
     if (command == "list") {
         const packageData = JSON.parse(fs.readFileSync(packageDataPath));
+        console.log(chalk.cyan("Packages:"));
         printTable(packageData, ["version", "description", "installPath"], 40);
         return;
     }
