@@ -143,7 +143,7 @@ export function printTable(obj, atrs, maxLength = 20) {
 
         for (let i = 0; i < atrs.length; i++) {
             const atr = atrs[i];
-            string += ` ${data[atr]}${spaces(lengthPerLines[i+1] - truncate(data[atr], maxLength).length)} │`;
+            string += ` ${truncate(data[atr], maxLength)}${spaces(lengthPerLines[i+1] - truncate(data[atr], maxLength).length)} │`;
         }
         printList.push(seperator);
         printList.push(string);
