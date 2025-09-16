@@ -162,9 +162,7 @@ export function addNewService(name, port, uri, https = true, servers, updateConf
         servers
     };
     fs.writeFileSync(serviceConfigPath, JSON.stringify(serviceConfigJson, null, 2));
-    if (updateConfig) {
-        updateNginxConfig();
-    }
+    updateNginxConfig(updateConfig);
 }
 
 export function removeService(name, updateConfig = true) {
@@ -176,9 +174,7 @@ export function removeService(name, updateConfig = true) {
     const serviceConfigJson = JSON.parse(fs.readFileSync(serviceConfigPath, "utf8"));
     delete serviceConfigJson[name];
     fs.writeFileSync(serviceConfigPath, JSON.stringify(serviceConfigJson, null, 2));
-    if (updateConfig) {
-        updateNginxConfig();
-    }
+    updateNginxConfig(updateConfig);
 }
 
 export function addNewServer(name, urls, certificate, certificateKey, updateConfig = true) {
@@ -214,9 +210,7 @@ export function addNewServer(name, urls, certificate, certificateKey, updateConf
         certificateKey
     };
     fs.writeFileSync(serverConfigPath, JSON.stringify(serverConfigJson, null, 2));
-    if (updateConfig) {
-        updateNginxConfig();
-    }
+    updateNginxConfig(updateConfig);
 }
 
 export function removeServer(name, updateConfig = true) {
@@ -240,9 +234,7 @@ export function removeServer(name, updateConfig = true) {
     delete serverConfigJson[name];
     fs.writeFileSync(serviceConfigPath, JSON.stringify(serviceConfigJson, null, 2));
     fs.writeFileSync(serverConfigPath, JSON.stringify(serverConfigJson, null, 2));
-    if (updateConfig) {
-        updateNginxConfig();
-    }
+    updateNginxConfig(updateConfig);
 }
 
 export function addServiceFromPackage(pkg, updateConfig = true) {

@@ -6,8 +6,8 @@ import ora from "ora";
 import chalk from "chalk";
 import { execSync } from "child_process";
 
-import { expandHomeDir, getCurrentDir, setUpFile, printTable, safeRemove, ensureDir, isDirEmpty, prependToKeyValue } from "./utils.js";
-import { nginxSetup, addServiceFromPackage, removeService } from "./nginxHandeler.js";
+import { expandHomeDir, getCurrentDir, setUpFile, printTable, safeRemove, ensureDir, isDirEmpty, prependToKeyValuen, stringToArray } from "./utils.js";
+import { nginxSetup, addServiceFromPackage, removeService, removeServer, addNewService, addNewServer, updateNginxConfig } from "./nginxHandeler.js";
 import { cloneRepo, gitPullRepo } from "./gitHandeler.js";
 
 chalk.orange = chalk.rgb(255, 165, 0);
@@ -209,15 +209,64 @@ function runPackage(packageName) {
         const script = pkg.scripts.start;
         execSync(script, { cwd: packageData[packageName].installPath,  stdio: "inherit" });
     } catch (err) {
-        console.error(err);
+        console.error(chalk.orange(err));
         throw err;
     }
 }
 
-function nginxCommands(command) {
+function nginxCommands(command, args) {
     const serviceConfigPath = path.join(getCurrentDir(), "nginxServiceConfig.json");
     const serverConfigPath = path.join(getCurrentDir(), "nginxServerConfig.json");
+    const noreload = args.n || args.noreload;
 
+    if (command == "addService") {
+        try {
+            addNewService(args._[2], args._[3], args._[4], !args.http, stringToArray(args._[5]), !noreload);
+        } catch (err) {
+            console.error(chalk.orange(err));
+            throw err;
+        }
+        return;
+    }
+    if (command == "addServer") {
+        try {
+            addNewServer(args._[2], stringToArray(args._[3]), args._[4], args._[5], !noreload);
+        } catch (err) {
+            console.error(chalk.orange(err));
+            throw err;
+        }
+        return;
+    }
+    if (command == "removeService") {
+        try {
+            removeService(args._[2], !noreload);
+        } catch (err) {
+            console.error(chalk.orange(err));
+            throw err;
+        }
+        return;
+    }
+    if (command == "removeServer") {
+        try {
+            removeServer(args._[2], !noreload);
+        } catch (err) {
+            console.error(chalk.orange(err));
+            throw err;
+        }
+        return;
+    }
+    if (command == "reload") {
+        const spinner = ora("Reloading Nginx config...").start();
+        try {
+            updateNginxConfig();
+            spinner("Reloaded Nginx");
+        } catch (err) {
+            spinner.fail("Failed to reload nginx confix");
+            console.error(chalk.orange(err));
+            throw err;
+        }
+        return;
+    }
     if (command == "listServices") {
         const serviceConfigJson = JSON.parse(fs.readFileSync(serviceConfigPath));
         console.log(chalk.cyan("Nginx Services:"));
@@ -232,6 +281,11 @@ function nginxCommands(command) {
     }
     if (command == "help" || command == "h" || command == "?" || !command) {
         console.log(chalk.cyan("Nginx Commands:"));
+        console.log("sudo ppm nginx", chalk.cyan("addService"), "<name> <port> <uri> <servers> [--http] [--noreload, -n]");
+        console.log("sudo ppm nginx", chalk.cyan("addServer"), "<name> <urls> <certificate> <certificate key> [--noreload, -n]");
+        console.log("sudo ppm nginx", chalk.cyan("removeService"), "<service name> [--noreload, -n]");
+        console.log("sudo ppm nginx", chalk.cyan("removeServer"), "<server name> [--noreload, -n]");
+        console.log("sudo ppm nginx", chalk.cyan("reload"));
         console.log("sudo ppm nginx", chalk.cyan("listServices"));
         console.log("sudo ppm nginx", chalk.cyan("listServers"));
         return;
@@ -255,7 +309,7 @@ export function setup() {
 
 export async function main() {
     const args = minimist(process.argv.slice(2), {
-        boolean: ['p', 'private', 'f', 'force']
+        boolean: ['p', 'private', 'f', 'force', 'n', 'noreload', 'http']
     });
 
     const packageDataPath = path.join(getCurrentDir(), "packageData.json");
@@ -317,7 +371,7 @@ export async function main() {
         return;
     }
     if (command == "nginx") {
-        nginxCommands(args._[1]);
+        nginxCommands(args._[1], args);
         return;
     }
     if (command == "help" || command == "h" || command == "?" || !command) {

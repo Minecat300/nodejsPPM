@@ -92,6 +92,10 @@ export function prependToKeyValue(obj, targetKey, prefix) {
     return obj;
 }
 
+export function stringToArray(str) {
+    return str.split(",");
+}
+
 export function isBlank(str) {
     return typeof str !== "string" || str.trim() === "";
 }
