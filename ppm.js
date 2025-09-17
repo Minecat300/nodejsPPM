@@ -118,18 +118,13 @@ function removePackageData(packageName) {
 function addPm2Package(pkg, installPath) {
     try {
         const user = getUser();
-        execSync(`sudo -u ${user} pm2 start ${path.join(installPath, pkg.pm2.file)} -f --name ${pkg.pm2.name}`, { stdio: "inherit" });
+        execSync(`sudo -u ${user} pm2 restart ${pkg.pm2.name} || sudo -u ${user} pm2 start ${path.join(installPath, pkg.pm2.file)} --name ${pkg.pm2.name}`, { stdio: "inherit" });
         execSync(`sudo -u ${user} pm2 save`, { stdio: "inherit" });
 
-        exec(`pm2 startup systemd -u ${user} --hp ${getHomeDir()}`, (error, stdout, stderr) => {
-            console.log("=== RAW STDOUT ===");
-            console.log(stdout);
-            console.log("=== RAW STDERR ===");
-            console.log(stderr);
-
+        exec("pm2 startup systemd", (error, stdout, stderr) => {
             const output = stdout + stderr;
-            console.log("=== COMBINED ===");
-            console.log(output);
+            const sudoLine = output.split("\n").find(l => l.includes("sudo"));
+            console.log(sudoLine ? sudoLine.trim() : chalk.yellow("No sudo command needed, PM2 configured automatically."));
         });
     } catch (err) {
         console.error(chalk.orange(err));
