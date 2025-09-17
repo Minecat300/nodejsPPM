@@ -6,7 +6,7 @@ import ora from "ora";
 import chalk from "chalk";
 import { execSync, exec } from "child_process";
 
-import { expandHomeDir, getCurrentDir, setUpFile, printTable, safeRemove, ensureDir, isDirEmpty, prependToKeyValue, stringToArray, getUser, getHomeDir } from "./utils.js";
+import { expandHomeDir, getCurrentDir, setUpFile, printTable, safeRemove, ensureDir, isDirEmpty, prependToKeyValue, stringToArray, getUser, getHomeDir, replaceWithEmpty } from "./utils.js";
 import { nginxSetup, addServiceFromPackage, removeService, removeServer, addNewService, addNewServer, updateNginxConfig } from "./nginxHandeler.js";
 import { cloneRepo, gitPullRepo } from "./gitHandeler.js";
 
@@ -270,7 +270,7 @@ function nginxCommands(command, args) {
 
     if (command == "addService") {
         try {
-            addNewService(args._[2], args._[3], args._[4], !args.http, stringToArray(args._[5]), !noreload);
+            addNewService(args._[2], args._[3], replaceWithEmpty(args._[4], "/"), !args.http, stringToArray(args._[5]), !noreload);
         } catch (err) {
             console.error(chalk.orange(err));
             throw err;
