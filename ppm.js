@@ -122,16 +122,14 @@ function addPm2Package(pkg, installPath) {
         execSync(`sudo -u ${user} pm2 save`, { stdio: "inherit" });
 
         exec(`pm2 startup systemd -u ${user} --hp ${getHomeDir()}`, (error, stdout, stderr) => {
-            const output = (stdout + stderr).split("\n");
+            console.log("=== RAW STDOUT ===");
+            console.log(stdout);
+            console.log("=== RAW STDERR ===");
+            console.log(stderr);
 
-            console.log(chalk.cyan("Run this command to enable PM2 startup at boot:"));
-
-            const sudoLine = output.find(line => line.includes("sudo") && line.includes("pm2 startup"));
-            if (sudoLine) {
-                console.log(sudoLine.trim());
-            } else {
-                console.log(chalk.yellow("Couldn't find the PM2 startup sudo command."));
-            }
+            const output = stdout + stderr;
+            console.log("=== COMBINED ===");
+            console.log(output);
         });
     } catch (err) {
         console.error(chalk.orange(err));
