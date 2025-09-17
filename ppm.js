@@ -319,13 +319,13 @@ function nginxCommands(command, args) {
     if (command == "listServices") {
         const serviceConfigJson = JSON.parse(fs.readFileSync(serviceConfigPath));
         console.log(chalk.cyan("Nginx Services:"));
-        printTable(prependToKeyValue(serviceConfigJson, "uri", "/"), ["port", "uri", "https", "servers"], 30);
+        printTable(prependToKeyValue(serviceConfigJson, "uri", "/"), args._[2] ? stringToArray(args._[2]) : ["port", "uri", "https", "servers"], args._[2] ? 100 : 30);
         return;
     }
     if (command == "listServers") {
         const serverConfigJson = JSON.parse(fs.readFileSync(serverConfigPath));
         console.log(chalk.cyan("Nginx Servers:"));
-        printTable(serverConfigJson, ["urls", "certificate", "certificateKey"], 30);
+        printTable(serverConfigJson, args._[2] ? stringToArray(args._[2]) : ["urls", "certificate", "certificateKey"], args._[2] ? 100 : 30);
         return;
     }
     if (command == "help" || command == "h" || command == "?" || !command) {
@@ -335,8 +335,8 @@ function nginxCommands(command, args) {
         console.log("sudo ppm nginx", chalk.cyan("removeService"), "<service name>                            [--noreload, -n]");
         console.log("sudo ppm nginx", chalk.cyan("removeServer"), "<server name>                              [--noreload, -n]");
         console.log("sudo ppm nginx", chalk.cyan("reload"));
-        console.log("sudo ppm nginx", chalk.cyan("listServices"));
-        console.log("sudo ppm nginx", chalk.cyan("listServers"));
+        console.log("sudo ppm nginx", chalk.cyan("listServices"), "<Item (optional)>");
+        console.log("sudo ppm nginx", chalk.cyan("listServers"), "<Item (optional)>");
         return;
     }
     console.log(chalk.cyan('Unknown Nginx Command. "ppm nginx help" for help'));
@@ -416,7 +416,7 @@ export async function main() {
     if (command == "list") {
         const packageData = JSON.parse(fs.readFileSync(packageDataPath));
         console.log(chalk.cyan("Packages:"));
-        printTable(packageData, ["version", "description", "installPath"], 40);
+        printTable(packageData, args._[1] ? stringToArray(args._[1]) : ["version", "description", "installPath"], args._[1] ? 100 : 40);
         return;
     }
     if (command == "nginx") {
@@ -429,7 +429,7 @@ export async function main() {
         console.log("sudo ppm", chalk.cyan("uninstall"), "<Package name>");
         console.log("sudo ppm", chalk.cyan("update"), "<Package name>");
         console.log("sudo ppm", chalk.cyan("run"), "<Package name>");
-        console.log("sudo ppm", chalk.cyan("list"));
+        console.log("sudo ppm", chalk.cyan("list"), "<Item (optional)>");
         console.log("sudo ppm", chalk.cyan("nginx"), "<Nginx command>");
         return;
     }
