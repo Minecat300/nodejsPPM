@@ -121,7 +121,12 @@ function addPm2Package(pkg, installPath) {
         execSync(`sudo -u ${user} pm2 start ${path.join(installPath, pkg.pm2.file)} --name ${pkg.pm2.name}`, { stdio: "inherit" });
         execSync(`sudo -u ${user} pm2 save`, { stdio: "inherit" });
 
-        const startupCmd = execSync(`pm2 startup systemd -u ${user} --hp ${getHomeDir()}`, { encoding: "utf8" });
+        let startupCmd = "";
+        try {
+            startupCmd = execSync(`pm2 startup systemd -u ${user} --hp ${getHomeDir()}`, { encoding: "utf8", stdio: "pipe" });
+        } catch (err) {
+            startupCmd = err.stdout.toString() + err.stderr.toString();
+        }
         console.log(chalk.cyan("Run this command to enable PM2 startup at boot:"));
         const sudoCmdMatch = startupCmd.match(/sudo .*/);
         if (sudoCmdMatch) {
@@ -428,7 +433,7 @@ export async function main() {
     }
     if (command == "help" || command == "h" || command == "?" || !command) {
         console.log(chalk.cyan("Commands: "));
-        console.log("sudo ppm", chalk.cyan("install"), "<username/orginisation> <Repository name> [--private, -p] [--force, -f]");
+        console.log("sudo ppm", chalk.cyan("install"), "<username/orginisation> <Repository name> [--private, -p] [--force, -f] [--branch <branch>]");
         console.log("sudo ppm", chalk.cyan("uninstall"), "<Package name>");
         console.log("sudo ppm", chalk.cyan("update"), "<Package name>");
         console.log("sudo ppm", chalk.cyan("run"), "<Package name>");
