@@ -15,6 +15,10 @@ export function setUpFile(path, data) {
 
 let currentHomeDir;
 
+export function getUser() {
+    return process.env.SUDO_USER || process.env.USER;
+}
+
 export function getHomeDir() { // shit i need the home dir to get the home dir... well thats useless
     if (!currentHomeDir) {
         const username = process.env.SUDO_USER || process.env.USER;

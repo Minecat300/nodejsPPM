@@ -6,7 +6,7 @@ import ora from "ora";
 import chalk from "chalk";
 import { execSync } from "child_process";
 
-import { expandHomeDir, getCurrentDir, setUpFile, printTable, safeRemove, ensureDir, isDirEmpty, prependToKeyValue, stringToArray } from "./utils.js";
+import { expandHomeDir, getCurrentDir, setUpFile, printTable, safeRemove, ensureDir, isDirEmpty, prependToKeyValue, stringToArray, getUser, getHomeDir } from "./utils.js";
 import { nginxSetup, addServiceFromPackage, removeService, removeServer, addNewService, addNewServer, updateNginxConfig } from "./nginxHandeler.js";
 import { cloneRepo, gitPullRepo } from "./gitHandeler.js";
 
@@ -93,6 +93,9 @@ function addPackageData(pkg, installPath) {
         if (pkg.nginx) {
             packageData[pkg.name].nginx = pkg.nginx;
         }
+        if (pkg.pm2) {
+            packageData[pkg.name].pm2 = pkg.pm2;
+        }
         fs.writeFileSync(packageDataPath, JSON.stringify(packageData, null, 2));
     } catch (err) {
         console.error(chalk.orange(err));
@@ -106,6 +109,46 @@ function removePackageData(packageName) {
         const packageData = JSON.parse(fs.readFileSync(packageDataPath));
         delete packageData[packageName];
         fs.writeFileSync(packageDataPath, JSON.stringify(packageData, null, 2));
+    } catch (err) {
+        console.error(chalk.orange(err));
+        throw err;
+    }
+}
+
+function addPm2Package(pkg, installPath) {
+    try {
+        const user = getUser();
+        execSync(`sudo -u ${user} pm2 start ${path.join(installPath, pkg.pm2.file)} --name ${pkg.pm2.name}`, { stdio: "inherit" });
+        execSync(`sudo -u ${user} pm2 save`, { stdio: "inherit" });
+
+        const startupCmd = execSync(`pm2 startup systemd -u ${user} --hp ${getHomeDir()}`, { encoding: "utf8" });
+        console.log(chalk.cyan("Run this command to enable PM2 startup at boot:"));
+        const sudoCmdMatch = startupCmd.match(/sudo .*/);
+        if (sudoCmdMatch) {
+            console.log(sudoCmdMatch[0]);
+        } else {
+            console.log(chalk.yellow("Couldn't find the PM2 startup sudo command."));
+        }
+    } catch (err) {
+        console.error(chalk.orange(err));
+        throw err;
+    }
+}
+
+function removePm2Pacakge(pkg) {
+    try {
+        const user = getUser();
+        execSync(`sudo -u ${user} pm2 delete ${pkg.pm2.name}`, { stdio: "inherit" });
+    } catch (err) {
+        console.error(chalk.orange(err));
+        throw err;
+    }
+}
+
+function restartPm2Package(pkg) {
+    try {
+        const user = getUser();
+        execSync(`sudo -u ${user} pm2 restart ${pkg.pm2.name}`, { stdio: "inherit" });
     } catch (err) {
         console.error(chalk.orange(err));
         throw err;
@@ -133,6 +176,9 @@ async function installPackage(user, repoName, branch, privateRepo, forceInstall)
         spinner.succeed(`Installed package: ${packageName}`);
         if (pkg.nginx) {
             addServiceFromPackage(pkg);
+        }
+        if (pkg.pm2) {
+            addPm2Package(pkg, installPath);
         }
     } catch (err) {
         safeRemove(tempDir);
@@ -165,6 +211,9 @@ function uninstallPackage(packageName) {
         if (pkg.nginx) {
             removeService(pkg.nginx.service.name);
         }
+        if (pkg.pm2) {
+            removePm2Pacakge(pkg);
+        }
     } catch (err) {
         spinner.fail("Failed to uninstall.");
         console.error(err);
@@ -193,6 +242,9 @@ async function updatePackage(packageName) {
         spinner.succeed(`Updated package: ${packageName}`);
         if (pkgJson.nginx) {
             addServiceFromPackage(pkgJson);
+        }
+        if (pkgJson.pm2) {
+            restartPm2Package(pkgJson);
         }
     } catch (err) {
         spinner.fail("Failed to update.");
