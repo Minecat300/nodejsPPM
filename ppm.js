@@ -118,22 +118,20 @@ function removePackageData(packageName) {
 function addPm2Package(pkg, installPath) {
     try {
         const user = getUser();
-        execSync(`sudo -u ${user} pm2 start ${path.join(installPath, pkg.pm2.file)} --name ${pkg.pm2.name}`, { stdio: "inherit" });
+        execSync(`sudo -u ${user} pm2 start ${path.join(installPath, pkg.pm2.file)} -f --name ${pkg.pm2.name}`, { stdio: "inherit" });
         execSync(`sudo -u ${user} pm2 save`, { stdio: "inherit" });
 
-        let startupCmd = "";
-        try {
-            startupCmd = execSync(`pm2 startup systemd -u ${user} --hp ${getHomeDir()}`, { encoding: "utf8", stdio: "pipe" });
-        } catch (err) {
-            startupCmd = err.stdout.toString() + err.stderr.toString();
-        }
-        console.log(chalk.cyan("Run this command to enable PM2 startup at boot:"));
-        const sudoCmdMatch = startupCmd.match(/sudo .*/);
-        if (sudoCmdMatch) {
-            console.log(sudoCmdMatch[0]);
-        } else {
-            console.log(chalk.yellow("Couldn't find the PM2 startup sudo command."));
-        }
+        exec(`pm2 startup systemd -u ${user} --hp ${getHomeDir()}`, (error, stdout, stderr) => {
+            const output = stdout + stderr;
+            console.log(chalk.cyan("Run this command to enable PM2 startup at boot:"));
+
+            const sudoCmdMatch = output.match(/sudo .*pm2.*startup.*/);
+            if (sudoCmdMatch) {
+                console.log(sudoCmdMatch[0]);
+            } else {
+                console.log(chalk.yellow("Couldn't find the PM2 startup sudo command."));
+            }
+        });
     } catch (err) {
         console.error(chalk.orange(err));
         throw err;
