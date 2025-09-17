@@ -4,7 +4,7 @@ import os from "os";
 import minimist from "minimist";
 import ora from "ora";
 import chalk from "chalk";
-import { execSync } from "child_process";
+import { execSync, exec } from "child_process";
 
 import { expandHomeDir, getCurrentDir, setUpFile, printTable, safeRemove, ensureDir, isDirEmpty, prependToKeyValue, stringToArray, getUser, getHomeDir } from "./utils.js";
 import { nginxSetup, addServiceFromPackage, removeService, removeServer, addNewService, addNewServer, updateNginxConfig } from "./nginxHandeler.js";
