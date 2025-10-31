@@ -11,6 +11,7 @@ import { nginxSetup, addServiceFromPackage, removeService, removeServer, addNewS
 import { cloneRepo, gitPullRepo } from "./gitHandeler.js";
 
 chalk.orange = chalk.rgb(255, 81, 0)
+chalk.cyan = chalk.rgb(0, 255, 255);
 
 function getPackageJson(dir) {
     const packagePath = path.join(dir, "package.json");

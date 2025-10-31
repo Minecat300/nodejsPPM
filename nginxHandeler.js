@@ -6,6 +6,7 @@ import chalk from "chalk";
 import { setUpFile, getCurrentDir, joinPreservedArrays, isBlank, safeRemove } from "./utils.js";
 
 chalk.orange = chalk.rgb(255, 81, 0);
+chalk.cyan = chalk.rgb(0, 255, 255);
 
 export function nginxSetup() {
     const servicePath = path.join(getCurrentDir(), "nginxServiceConfig.json");
@@ -62,6 +63,8 @@ function updateNginxHTTPSConfig(reload = true) {
             fs.writeFileSync(serverNginxPath, "");
         }
         const serverConfigValues = serverConfigJson[server];
+        if (!serverConfigValues.certificate || !serverConfigValues.certificateKey) continue;
+        if (!fs.existsSync(serverConfigValues.certificate) || !fs.existsSync(serverConfigValues.certificateKey)) continue;
         let fullConfig = `
 server {
     listen 443 ssl;
@@ -188,14 +191,6 @@ export function addNewServer(name, urls, certificate, certificateKey, updateConf
     }
     if (!Array.isArray(urls) || urls.length === 0) {
         console.error(chalk.orange("urls missing"));
-        return;
-    }
-    if (isBlank(certificate)) {
-        console.error(chalk.orange("certificate missing"));
-        return;
-    }
-    if (isBlank(certificateKey)) {
-        console.error(chalk.orange("certificate key missing"));
         return;
     }
 

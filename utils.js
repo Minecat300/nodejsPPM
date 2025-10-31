@@ -4,7 +4,8 @@ import { execSync } from "child_process";
 import { fileURLToPath } from "url";
 import chalk from "chalk";
 
-chalk.orange = chalk.rgb(255, 81, 0)
+chalk.orange = chalk.rgb(255, 81, 0);
+chalk.cyan = chalk.rgb(0, 255, 255);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
