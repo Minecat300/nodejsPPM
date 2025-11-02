@@ -3,6 +3,7 @@ import path from "path";
 import { execSync } from "child_process";
 import { fileURLToPath } from "url";
 import chalk from "chalk";
+import process from "process";
 
 chalk.orange = chalk.rgb(255, 81, 0);
 chalk.cyan = chalk.rgb(0, 255, 255);
@@ -17,19 +18,36 @@ export function setUpFile(path, data) {
 let currentHomeDir;
 
 export function getUser() {
-    return process.env.SUDO_USER || process.env.USER;
+    return (
+        process.env.SUDO_USER ||
+        process.env.USER ||
+        process.env.USERNAME ||
+        process.env.LOGNAME ||
+        "unknown"
+    );
 }
 
 export function replaceWithEmpty(value, replace) {
     return replace === value ? "" : value;
 }
 
-export function getHomeDir() { // shit i need the home dir to get the home dir... well thats useless
+export function getHomeDir() {
     if (!currentHomeDir) {
-        const username = process.env.SUDO_USER || process.env.USER;
-        const homeDir = execSync(`getent passwd ${username} | cut -d: -f6`).toString().trim();
-        currentHomeDir = homeDir;
+        const platform = process.platform;
+
+        if (platform === "win32") {
+            // Windows default home dir
+            currentHomeDir = process.env.USERPROFILE ||
+                             path.join(process.env.HOMEDRIVE || "C:", process.env.HOMEPATH || "\\Users\\Default");
+        } else {
+            // Linux/macOS default home dir
+            currentHomeDir = process.env.HOME || os.homedir();
+        }
+
+        // Final fallback, just in case
+        if (!currentHomeDir) currentHomeDir = os.homedir();
     }
+
     return currentHomeDir;
 }
 
@@ -51,29 +69,46 @@ export function ensureDir(dir) {
     }
 }
 
+import fs from "fs";
+import path from "path";
+import chalk from "chalk";
+
 export function safeRemove(targetPath) {
-    if (!targetPath) {
-        throw new Error(chalk.orange("No path provided."));
-    }
+    if (!targetPath) throw new Error(chalk.orange("No path provided."));
 
     const resolved = path.resolve(targetPath);
 
-    const forbidden = ["/", "/root", "/home", "/etc", "/bin", "/usr", "/var"];
+    // Platform-specific forbidden paths
+    const forbidden = process.platform === "win32"
+        ? [
+            "C:\\", "C:\\Windows", "C:\\Windows\\System32",
+            "C:\\Program Files", "C:\\Program Files (x86)",
+            process.env.SYSTEMROOT, process.env.WINDIR
+        ]
+        : ["/", "/root", "/home", "/etc", "/bin", "/usr", "/var"];
 
-    if (forbidden.includes(resolved)) {
+    // Normalize comparison for Windows (case-insensitive)
+    const normalizedResolved = process.platform === "win32" ? resolved.toLowerCase() : resolved;
+
+    if (forbidden.some(p => normalizedResolved.startsWith((p || "").toLowerCase()))) {
         throw new Error(chalk.red(`Refusing to remove critical path: ${resolved}`));
     }
 
-    if (resolved.split(path.sep).filter(Boolean).length < 2) {
+    // Prevent deleting very top-level folders (like C:\ or /something)
+    const depth = resolved.split(path.sep).filter(Boolean).length;
+    if (depth < 2) {
         throw new Error(chalk.red(`Refusing to remove high-level path: ${resolved}`));
     }
 
-    if (!fs.existsSync(resolved)) {
-        return;
-    }
+    if (!fs.existsSync(resolved)) return;
 
-    fs.rmSync(resolved, { recursive: true, force: true });
+    try {
+        fs.rmSync(resolved, { recursive: true, force: true });
+    } catch (err) {
+        console.error(chalk.red(`Failed to remove ${resolved}: ${err.message}`));
+    }
 }
+
 
 export function isDirEmpty(dirPath) {
     if (!fs.existsSync(dirPath)) return true;

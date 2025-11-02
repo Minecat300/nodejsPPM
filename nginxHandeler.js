@@ -2,13 +2,32 @@ import fs from "fs";
 import path from "path";
 import { execSync } from "child_process";
 import chalk from "chalk";
+import process from "process";
 
 import { setUpFile, getCurrentDir, joinPreservedArrays, isBlank, safeRemove } from "./utils.js";
 
 chalk.orange = chalk.rgb(255, 81, 0);
 chalk.cyan = chalk.rgb(0, 255, 255);
 
+export function hasNginx() {
+    try {
+        const path = execSync("command -v nginx").toString().trim();
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 export function nginxSetup() {
+    if (process.platform === "win32") {
+        console.warn(chalk.yellow("NGINX is not supported on Windows with PPM."));
+        return;
+    }
+    if (!hasNginx()) {
+        console.warn(chalk.yellow("NGINX is not installed on this system. Please install NGINX for its functions."));
+        return;
+    }
+
     const servicePath = path.join(getCurrentDir(), "nginxServiceConfig.json");
     const serverPath = path.join(getCurrentDir(), "nginxServerConfig.json");
     if (!fs.existsSync(servicePath)) {
@@ -20,6 +39,11 @@ export function nginxSetup() {
 }
 
 function updateNginxHTTPConfig(reload = true) {
+    if (!hasNginx()) {
+        console.warn(chalk.yellow("NGINX is not installed on this system. Please install NGINX for its functions."));
+        return;
+    }
+
     const serverConfigPath = path.join(getCurrentDir(), "nginxServerConfig.json");
     const serverConfigJson = JSON.parse(fs.readFileSync(serverConfigPath, "utf8"));
 
@@ -52,6 +76,11 @@ server {
 }
 
 function updateNginxHTTPSConfig(reload = true) {
+    if (!hasNginx()) {
+        console.warn(chalk.yellow("NGINX is not installed on this system. Please install NGINX for its functions."));
+        return;
+    }
+
     const serverConfigPath = path.join(getCurrentDir(), "nginxServerConfig.json");
     const serviceConfigPath = path.join(getCurrentDir(), "nginxServiceConfig.json");
     const serverConfigJson = JSON.parse(fs.readFileSync(serverConfigPath, "utf8"));
@@ -122,6 +151,11 @@ server {
 }
 
 export function updateNginxConfig(reload = true) {
+    if (!hasNginx()) {
+        console.warn(chalk.yellow("NGINX is not installed on this system. Please install NGINX for its functions."));
+        return;
+    }
+
     updateNginxHTTPConfig(false);
     updateNginxHTTPSConfig(false);
     if (reload) {

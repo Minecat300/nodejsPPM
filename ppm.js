@@ -5,9 +5,10 @@ import minimist from "minimist";
 import ora from "ora";
 import chalk from "chalk";
 import { execSync, exec } from "child_process";
+import process from "process";
 
 import { expandHomeDir, getCurrentDir, setUpFile, printTable, safeRemove, ensureDir, isDirEmpty, prependToKeyValue, stringToArray, getUser, getHomeDir, replaceWithEmpty } from "./utils.js";
-import { nginxSetup, addServiceFromPackage, removeService, removeServer, addNewService, addNewServer, updateNginxConfig } from "./nginxHandeler.js";
+import { nginxSetup, addServiceFromPackage, removeService, removeServer, addNewService, addNewServer, updateNginxConfig, hasNginx } from "./nginxHandeler.js";
 import { cloneRepo, gitPullRepo } from "./gitHandeler.js";
 
 chalk.orange = chalk.rgb(255, 81, 0)
@@ -60,10 +61,15 @@ function moveFilesToInstallPath(installPath, tempDir) {
     }
 }
 
-function fixPermissions(installPath) {
-    try{
+export function fixPermissions(installPath) {
+    try {
+        if (process.platform === "win32") {
+            console.log(chalk.yellow("Skipping ownership fix on Windows."));
+            return;
+        }
+
         const username = process.env.SUDO_USER || os.userInfo().username;
-        execSync(`chown -R ${username}:${username} "${installPath}"`);
+        execSync(`chown -R ${username}:${username} "${installPath}"`, { stdio: "inherit" });
         console.log(chalk.green(`Fixed file ownership to user ${username}`));
     } catch (err) {
         console.warn(chalk.yellow(`Could not fix ownership: ${err.message}`));
@@ -116,37 +122,53 @@ function removePackageData(packageName) {
     }
 }
 
-function addPm2Package(pkg, installPath) {
+export function addPm2Package(pkg, installPath) {
     try {
-        const user = getUser();
-        execSync(`sudo -u ${user} pm2 restart ${pkg.pm2.name} || sudo -u ${user} pm2 start ${path.join(installPath, pkg.pm2.file)} --name ${pkg.pm2.name}`, { stdio: "inherit" });
-        execSync(`sudo -u ${user} pm2 save`, { stdio: "inherit" });
+        if (process.platform === "win32") {
+            // Windows: no sudo, just run PM2 as current user
+            execSync(`pm2 restart ${pkg.pm2.name} || pm2 start ${path.join(installPath, pkg.pm2.file)} --name ${pkg.pm2.name}`, { stdio: "inherit" });
+            execSync("pm2 save", { stdio: "inherit" });
+            console.log(chalk.green("PM2 configured on Windows as current user."));
+        } else {
+            // Linux/macOS: keep original logic
+            const user = getUser();
+            execSync(`sudo -u ${user} pm2 restart ${pkg.pm2.name} || sudo -u ${user} pm2 start ${path.join(installPath, pkg.pm2.file)} --name ${pkg.pm2.name}`, { stdio: "inherit" });
+            execSync(`sudo -u ${user} pm2 save`, { stdio: "inherit" });
 
-        exec("pm2 startup systemd", (error, stdout, stderr) => {
-            const output = stdout + stderr;
-            const sudoLine = output.split("\n").find(l => l.includes("sudo"));
-            console.log(sudoLine ? sudoLine.trim() : chalk.yellow("No sudo command needed, PM2 configured automatically."));
-        });
+            exec("pm2 startup systemd", (error, stdout, stderr) => {
+                const output = stdout + stderr;
+                const sudoLine = output.split("\n").find(l => l.includes("sudo"));
+                console.log(sudoLine ? sudoLine.trim() : chalk.yellow("No sudo command needed, PM2 configured automatically."));
+            });
+        }
     } catch (err) {
         console.error(chalk.orange(err));
         throw err;
     }
 }
 
-function removePm2Pacakge(pkg) {
+export function removePm2Package(pkg) {
     try {
-        const user = getUser();
-        execSync(`sudo -u ${user} pm2 delete ${pkg.pm2.name}`, { stdio: "inherit" });
+        if (process.platform === "win32") {
+            execSync(`pm2 delete ${pkg.pm2.name}`, { stdio: "inherit" });
+        } else {
+            const user = getUser();
+            execSync(`sudo -u ${user} pm2 delete ${pkg.pm2.name}`, { stdio: "inherit" });
+        }
     } catch (err) {
         console.error(chalk.orange(err));
         throw err;
     }
 }
 
-function restartPm2Package(pkg) {
+export function restartPm2Package(pkg) {
     try {
-        const user = getUser();
-        execSync(`sudo -u ${user} pm2 restart ${pkg.pm2.name}`, { stdio: "inherit" });
+        if (process.platform === "win32") {
+            execSync(`pm2 restart ${pkg.pm2.name}`, { stdio: "inherit" });
+        } else {
+            const user = getUser();
+            execSync(`sudo -u ${user} pm2 restart ${pkg.pm2.name}`, { stdio: "inherit" });
+        }
     } catch (err) {
         console.error(chalk.orange(err));
         throw err;
@@ -265,6 +287,15 @@ function runPackage(packageName) {
 }
 
 function nginxCommands(command, args) {
+    if (process.platform === "win32") {
+        console.warn(chalk.yellow("NGINX is not supported on Windows with PPM."));
+        return;
+    }
+    if (!hasNginx()) {
+        console.warn(chalk.yellow("NGINX is not installed on this system. Please install NGINX for its functions."));
+        return;
+    }
+
     const serviceConfigPath = path.join(getCurrentDir(), "nginxServiceConfig.json");
     const serverConfigPath = path.join(getCurrentDir(), "nginxServerConfig.json");
     const noreload = args.n || args.noreload;
