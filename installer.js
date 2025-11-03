@@ -80,14 +80,36 @@ if (isWindows) {
             console.log(`Creating symlink at ${symlinkPath}...`);
 
             if (needsAdmin) {
+                const cmdFile = `${symlinkPath}.cmd`;
+                console.log(`Creating system-wide launcher at ${cmdFile} (requires admin)...`);
+
+                const launcher = `@echo off
+            node "${mainJsPath}" %*
+            `;
+
+                // Write a temporary file first to avoid quoting issues
+                const tempFile = path.join(__dirname, "ppm_temp_launcher.cmd");
+                fs.writeFileSync(tempFile, launcher);
+
                 const result = spawnSync("powershell.exe", [
                     "-Command",
-                    `Start-Process powershell -Verb runAs -ArgumentList "New-Item -Path '${symlinkPath}' -ItemType SymbolicLink -Value '${mainJsPath}'"`
+                    `Start-Process PowerShell -Verb RunAs -ArgumentList 'Copy-Item -Path "${tempFile}" -Destination "${cmdFile}" -Force'`
                 ], { stdio: "inherit" });
 
                 if (result.error) throw result.error;
+
+                fs.unlinkSync(tempFile);
+                console.log(`Launcher created at ${cmdFile}.`);
             } else {
-                fs.symlinkSync(mainJsPath, symlinkPath, "file");
+                const cmdFile = `${symlinkPath}.cmd`;
+                console.log(`Creating user launcher at ${cmdFile}...`);
+
+                const launcher = `@echo off
+            node "${mainJsPath}" %*
+            `;
+
+                fs.writeFileSync(cmdFile, launcher);
+                console.log(`Launcher created at ${cmdFile}.`);
             }
 
             console.log(`Symlink created at ${symlinkPath}.`);
