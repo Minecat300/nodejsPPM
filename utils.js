@@ -6,7 +6,7 @@ import chalk from "chalk";
 import process from "process";
 
 chalk.orange = chalk.rgb(255, 81, 0);
-chalk.trueCyan = chalk.rgb(0, 255, 255);
+chalk.trueCyan = chalk.rgb(39, 185, 232);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -87,6 +87,7 @@ export function safeRemove(targetPath) {
     const normalizedResolved = process.platform === "win32" ? resolved.toLowerCase() : resolved;
 
     if (forbidden.some(p => normalizedResolved.startsWith((p || "").toLowerCase()))) {
+        console.log(forbidden, resolved)
         throw new Error(chalk.red(`Refusing to remove critical path: ${resolved}`));
     }
 
