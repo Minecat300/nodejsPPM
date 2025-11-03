@@ -73,9 +73,9 @@ node "${mainJsPath}" %*
         if (!fs.existsSync(binFolder)) {
             if (needsAdmin) {
                 console.log(`Creating system-wide folder at ${binFolder} (requires admin)...`);
-                const psScript = `
+                const psCommand = `
             if (-Not (Test-Path '${binFolder}')) {
-                New-Item -ItemType Directory -Path '${binFolder}' | Out-Null
+                New-Item -ItemType Directory -Path '${binFolder}' -Force | Out-Null
                 Write-Host 'Created ${binFolder}'
             } else {
                 Write-Host '${binFolder} already exists'
@@ -85,7 +85,7 @@ node "${mainJsPath}" %*
                     "-NoProfile",
                     "-ExecutionPolicy", "Bypass",
                     "-Command",
-                    `Start-Process PowerShell -Verb RunAs -Wait -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command \\"${psScript.replace(/\n/g, ';')}\\""`
+                    `Start-Process PowerShell -Verb RunAs -Wait -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-Command','${psCommand.replace(/'/g, "''")}')`
                 ], { stdio: "inherit" });
 
                 if (result.error) throw result.error;
@@ -93,6 +93,7 @@ node "${mainJsPath}" %*
                 fs.mkdirSync(binFolder, { recursive: true });
                 console.log(`Created folder ${binFolder}.`);
             }
+
         }
 
         // 2. Write the .cmd launcher
