@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { execSync, spawnSync } from "child_process";
 import { fileURLToPath } from "url";
-const readline = require("readline-sync");
+import readline from "readline-sync";
 import process from "process";
 
 const __filename = fileURLToPath(import.meta.url);
