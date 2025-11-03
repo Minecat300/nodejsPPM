@@ -7,7 +7,7 @@ import process from "process";
 import { setUpFile, getCurrentDir, joinPreservedArrays, isBlank, safeRemove } from "./utils.js";
 
 chalk.orange = chalk.rgb(255, 81, 0);
-chalk.cyan = chalk.rgb(0, 255, 255);
+chalk.trueCyan = chalk.rgb(0, 255, 255);
 
 export function hasNginx() {
     try {

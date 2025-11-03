@@ -6,7 +6,7 @@ import chalk from "chalk";
 import process from "process";
 
 chalk.orange = chalk.rgb(255, 81, 0);
-chalk.cyan = chalk.rgb(0, 255, 255);
+chalk.trueCyan = chalk.rgb(0, 255, 255);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -195,10 +195,10 @@ export function printTable(obj, atrs, maxLength = 20) {
     }
 
     let header = "│ ";
-    header += `${chalk.cyan("name")}${spaces(lengthPerLines[0] - "name".length)} │`;
+    header += `${chalk.trueCyan("name")}${spaces(lengthPerLines[0] - "name".length)} │`;
     for (let i = 0; i < atrs.length; i++) {
         const atr = atrs[i];
-        header += ` ${chalk.cyan(atr)}${spaces(lengthPerLines[i+1] - atr.length)} │`;
+        header += ` ${chalk.trueCyan(atr)}${spaces(lengthPerLines[i+1] - atr.length)} │`;
     }
 
     let topString = "┌";

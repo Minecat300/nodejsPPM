@@ -12,7 +12,7 @@ import { nginxSetup, addServiceFromPackage, removeService, removeServer, addNewS
 import { cloneRepo, gitPullRepo } from "./gitHandeler.js";
 
 chalk.orange = chalk.rgb(255, 81, 0)
-chalk.cyan = chalk.rgb(0, 255, 255);
+chalk.trueCyan = chalk.rgb(0, 255, 255);
 
 function getPackageJson(dir) {
     const packagePath = path.join(dir, "package.json");
@@ -232,7 +232,7 @@ function uninstallPackage(packageName) {
             removeService(pkg.nginx.service.name);
         }
         if (pkg.pm2) {
-            removePm2Pacakge(pkg);
+            removePm2Package(pkg);
         }
     } catch (err) {
         spinner.fail("Failed to uninstall.");
