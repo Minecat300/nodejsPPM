@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { execSync, spawnSync } from "child_process";
 import { fileURLToPath } from "url";
-import * as readline from "readline-sync";
+import readline from "readline";
 import process from "process";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -32,12 +32,24 @@ execSync("npm install", { cwd: __dirname, stdio: "inherit" });
 const globalCmdName = "ppm";
 const mainJsPath = path.join(__dirname, "main.js");
 
+async function askQuestion(query) {
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+    });
+    return new Promise(resolve => rl.question(query, ans => {
+        rl.close();
+        resolve(ans.trim());
+    }));
+}
+
 if (isWindows) {
     execSync(`icacls "${mainJsPath}" /grant Everyone:RX`, { stdio: "inherit" });
 
-    const installScope = readline.keyInSelect(["User-wide", "System-wide"], "Install globally for user or system?");
+    const choice = await askQuestion("Install globally for user or system? (u/s): ");
+    const installScope = choice.toLowerCase().startsWith("s") ? 1 : 0;
 
-    if (installScope === -1) {
+    if (choice === "") {
         console.log("Installation canceled.");
         process.exit(0);
     }
@@ -68,7 +80,7 @@ if (isWindows) {
             console.log(`Creating symlink at ${symlinkPath}...`);
 
             if (needsAdmin) {
-                const result = spawnSync("powershull.exe", [
+                const result = spawnSync("powershell.exe", [
                     "-Command",
                     `Start-Process powershell -Verb runAs -ArgumentList "New-Item -Path '${symlinkPath}' -ItemType SymbolicLink -Value '${mainJsPath}'"`
                 ], { stdio: "inherit" });
@@ -77,7 +89,7 @@ if (isWindows) {
             } else {
                 fs.symlinkSync(mainJsPath, symlinkPath, "file");
             }
-            
+
             console.log(`Symlink created at ${symlinkPath}.`);
         } else {
             console.log(`${globalCmdName} symlink already exists at ${binFolder}.`);
@@ -85,7 +97,7 @@ if (isWindows) {
 
         if (!needsAdmin) {
             const currentPath = process.env.PATH || "";
-            if (!currentPath.toLowerCase().includes(binFolder.toLowerCase())){
+            if (!currentPath.toLowerCase().includes(binFolder.toLowerCase())) {
                 console.log(`Adding ${binFolder} to user PATH...`);
                 execSync(`setx PATH "${currentPath};${binFolder}"`, { stdio: "inherit", shell: "cmd.exe" });
                 console.log("PATH updated! Restart your terminal to use the command globally.");
