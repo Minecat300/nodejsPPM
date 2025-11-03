@@ -134,4 +134,4 @@ if (isLinux) {
     }
 }
 
-console.log(`Setup complete! You can now run '${globalCmdName}' from anywhere, with or without sudo.`);
+console.log(`Setup complete! You can now run '${globalCmdName}' from anywhere`);

@@ -21,6 +21,7 @@ export function hasNginx() {
 export function nginxSetup() {
     if (process.platform === "win32") {
         console.warn(chalk.yellow("NGINX is not supported on Windows with PPM."));
+        return;
     }
     if (!hasNginx()) {
         console.warn(chalk.yellow("NGINX is not installed on this system. Please install NGINX for its functions."));
@@ -280,6 +281,9 @@ export function removeServer(name, updateConfig = true) {
 }
 
 export function addServiceFromPackage(pkg, updateConfig = true) {
+    if (process.platform === "win32") {
+        return;
+    }
     if (!pkg.nginx) {
         console.error(chalk.orange("Nginx config missing"));
         return;
