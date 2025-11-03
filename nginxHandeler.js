@@ -21,11 +21,9 @@ export function hasNginx() {
 export function nginxSetup() {
     if (process.platform === "win32") {
         console.warn(chalk.yellow("NGINX is not supported on Windows with PPM."));
-        return;
     }
     if (!hasNginx()) {
         console.warn(chalk.yellow("NGINX is not installed on this system. Please install NGINX for its functions."));
-        return;
     }
 
     const servicePath = path.join(getCurrentDir(), "nginxServiceConfig.json");
