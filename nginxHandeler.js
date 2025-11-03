@@ -150,6 +150,9 @@ server {
 }
 
 export function updateNginxConfig(reload = true) {
+    if (process.platform === "win32") {
+        return;
+    }
     if (!hasNginx()) {
         console.warn(chalk.yellow("NGINX is not installed on this system. Please install NGINX for its functions."));
         return;
@@ -163,6 +166,9 @@ export function updateNginxConfig(reload = true) {
 }
 
 export function addNewService(name, port, uri, https = true, servers, updateConfig = true) {
+    if (process.platform === "win32") {
+        return;
+    }
     if (isBlank(name)) {
         console.error(chalk.orange("Name missing"));
         return;
@@ -202,6 +208,9 @@ export function addNewService(name, port, uri, https = true, servers, updateConf
 }
 
 export function removeService(name, updateConfig = true) {
+    if (process.platform === "win32") {
+        return;
+    }
     if (!name) {
         console.error(chalk.orange("Name missing"));
         return;
@@ -218,6 +227,9 @@ export function removeService(name, updateConfig = true) {
 }
 
 export function addNewServer(name, urls, certificate, certificateKey, updateConfig = true) {
+    if (process.platform === "win32") {
+        return;
+    }
     if (isBlank(name)) {
         console.error(chalk.orange("name missing"));
         return;
@@ -246,6 +258,9 @@ export function addNewServer(name, urls, certificate, certificateKey, updateConf
 }
 
 export function removeServer(name, updateConfig = true) {
+    if (process.platform === "win32") {
+        return;
+    }
     if (!name) {
         console.error(chalk.orange("Name missing"));
         return;
