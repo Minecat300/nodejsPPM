@@ -69,10 +69,6 @@ export function ensureDir(dir) {
     }
 }
 
-import fs from "fs";
-import path from "path";
-import chalk from "chalk";
-
 export function safeRemove(targetPath) {
     if (!targetPath) throw new Error(chalk.orange("No path provided."));
 

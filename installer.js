@@ -63,7 +63,13 @@ if (isWindows) {
         needsAdmin = true;
     }
 
+    const cmdFile = path.join(binFolder, `${globalCmdName}.cmd`);
+    const launcher = `@echo off
+node "${mainJsPath}" %*
+`;
+
     try {
+        // 1. Create the folder
         if (!fs.existsSync(binFolder)) {
             if (needsAdmin) {
                 console.log(`Creating system-wide folder at ${binFolder} (requires admin)...`);
@@ -74,64 +80,40 @@ if (isWindows) {
             }
         }
 
-        const symlinkPath = path.join(binFolder, globalCmdName);
-
-        if (!fs.existsSync(symlinkPath)) {
-            console.log(`Creating symlink at ${symlinkPath}...`);
-
-            if (needsAdmin) {
-                const cmdFile = `${symlinkPath}.cmd`;
-                console.log(`Creating system-wide launcher at ${cmdFile} (requires admin)...`);
-
-                const launcher = `@echo off
-            node "${mainJsPath}" %*
-            `;
-
-                // Write a temporary file first to avoid quoting issues
-                const tempFile = path.join(__dirname, "ppm_temp_launcher.cmd");
-                fs.writeFileSync(tempFile, launcher);
-
-                const result = spawnSync("powershell.exe", [
-                    "-Command",
-                    `Start-Process PowerShell -Verb RunAs -ArgumentList 'Copy-Item -Path "${tempFile}" -Destination "${cmdFile}" -Force'`
-                ], { stdio: "inherit" });
-
-                if (result.error) throw result.error;
-
-                fs.unlinkSync(tempFile);
-                console.log(`Launcher created at ${cmdFile}.`);
-            } else {
-                const cmdFile = `${symlinkPath}.cmd`;
-                console.log(`Creating user launcher at ${cmdFile}...`);
-
-                const launcher = `@echo off
-            node "${mainJsPath}" %*
-            `;
-
-                fs.writeFileSync(cmdFile, launcher);
-                console.log(`Launcher created at ${cmdFile}.`);
-            }
-
-            console.log(`Symlink created at ${symlinkPath}.`);
+        // 2. Write the .cmd launcher
+        if (needsAdmin) {
+            console.log(`Creating system-wide launcher at ${cmdFile} (requires admin)...`);
+            const tempFile = path.join(__dirname, "ppm_temp_launcher.cmd");
+            fs.writeFileSync(tempFile, launcher);
+            execSync(`powershell -Command "Start-Process PowerShell -Verb RunAs -ArgumentList 'Copy-Item -Path \\"${tempFile}\\" -Destination \\"${cmdFile}\\" -Force'"`, { stdio: "inherit" });
+            fs.unlinkSync(tempFile);
         } else {
-            console.log(`${globalCmdName} symlink already exists at ${binFolder}.`);
+            fs.writeFileSync(cmdFile, launcher);
         }
 
-        if (!needsAdmin) {
-            const currentPath = process.env.PATH || "";
-            if (!currentPath.toLowerCase().includes(binFolder.toLowerCase())) {
-                console.log(`Adding ${binFolder} to user PATH...`);
-                execSync(`setx PATH "${currentPath};${binFolder}"`, { stdio: "inherit", shell: "cmd.exe" });
-                console.log("PATH updated! Restart your terminal to use the command globally.");
+        console.log(`Launcher created at ${cmdFile}.`);
+
+        // 3. Add to PATH
+        const pathToAdd = binFolder;
+        const currentPath = process.env.PATH || "";
+        if (!currentPath.toLowerCase().includes(pathToAdd.toLowerCase())) {
+            if (needsAdmin) {
+                console.log("Adding folder to system PATH (requires admin)...");
+                execSync(`powershell -Command "Start-Process PowerShell -Verb RunAs -ArgumentList 'setx /M PATH \\"${currentPath};${pathToAdd}\\"'"`, { stdio: "inherit" });
             } else {
-                console.log(`${binFolder} is already in PATH.`);
+                console.log("Adding folder to user PATH...");
+                execSync(`setx PATH "${currentPath};${pathToAdd}"`, { stdio: "inherit", shell: "cmd.exe" });
             }
+            console.log("PATH updated! Restart your terminal to use the command globally.");
+        } else {
+            console.log(`${pathToAdd} is already in PATH.`);
         }
     } catch (err) {
-        console.error("Failed to create symlink or update PATH:", err.message);
+        console.error("Failed to create launcher or update PATH:", err.message);
         process.exit(1);
     }
 }
+
 
 if (isLinux) {
     execSync(`chmod +x "${mainJsPath}"`, { stdio: "inherit" });
