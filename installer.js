@@ -67,7 +67,7 @@ if (isWindows) {
         if (!fs.existsSync(binFolder)) {
             if (needsAdmin) {
                 console.log(`Creating system-wide folder at ${binFolder} (requires admin)...`);
-                execSync(`powershell -Command "New-Item -Path '${binFolder}' -ItemType Directory"`, { stdio: "inherit" });
+                execSync(`powershell -Command "Start-Process PowerShell -Verb RunAs -ArgumentList 'New-Item -Path \\"${binFolder}\\" -ItemType Directory'"`, { stdio: "inherit" });
             } else {
                 fs.mkdirSync(binFolder, { recursive: true });
                 console.log(`Created folder ${binFolder}.`);
