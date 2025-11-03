@@ -86,8 +86,15 @@ export function safeRemove(targetPath) {
     // Normalize comparison for Windows (case-insensitive)
     const normalizedResolved = process.platform === "win32" ? resolved.toLowerCase() : resolved;
 
-    if (forbidden.some(p => normalizedResolved.startsWith((p || "").toLowerCase()))) {
-        console.log(forbidden, normalizedResolved)
+    const isForbidden = forbidden.some(p => {
+        if (!p) return false;
+        const normP = p.toLowerCase();
+        // Match exact or direct subdirectory (not just same prefix like C:\)
+        return normalizedResolved === normP || normalizedResolved.startsWith(normP + path.sep.toLowerCase());
+    });
+
+    if (isForbidden) {
+        console.log(forbidden, normalizedResolved);
         throw new Error(chalk.red(`Refusing to remove critical path: ${resolved}`));
     }
 
