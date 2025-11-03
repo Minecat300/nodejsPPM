@@ -87,7 +87,7 @@ export function safeRemove(targetPath) {
     const normalizedResolved = process.platform === "win32" ? resolved.toLowerCase() : resolved;
 
     if (forbidden.some(p => normalizedResolved.startsWith((p || "").toLowerCase()))) {
-        console.log(forbidden, resolved)
+        console.log(forbidden, normalizedResolved)
         throw new Error(chalk.red(`Refusing to remove critical path: ${resolved}`));
     }
 
