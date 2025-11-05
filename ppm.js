@@ -273,16 +273,16 @@ async function updatePackage(packageName) {
     }
 }
 
-function runPackage(packageName) {
+function runPackage(packageName, commands) {
     try {
         const packageDataPath = path.join(getCurrentDir(), "packageData.json");
         const packageData = JSON.parse(fs.readFileSync(packageDataPath));
+        if (!packageData[packageName]) throw chalk.orange(`Pakcage ${packageName} not found`);
         const pkg = getPackageJson(packageData[packageName].installPath);
         const script = pkg.scripts.start;
-        execSync(script, { cwd: packageData[packageName].installPath,  stdio: "inherit" });
+        execSync(`${script} ${commands.join(" ")}`, { cwd: packageData[packageName].installPath,  stdio: "inherit" });
     } catch (err) {
         console.error(chalk.orange(err));
-        throw err;
     }
 }
 
@@ -442,7 +442,7 @@ export async function main() {
             return;
         }
 
-        runPackage(packageName);
+        runPackage(packageName, process.argv.slice(4));
         return;
     }
     if (command == "list") {

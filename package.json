@@ -1,6 +1,6 @@
 {
     "name": "project-package-manager",
-    "version": "1.7.8",
+    "version": "1.7.9",
     "description": "Handles the packages for projects.",
     "main": "main.js",
     "type": "module",
