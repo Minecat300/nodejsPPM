@@ -113,6 +113,15 @@ export function safeRemove(targetPath) {
     }
 }
 
+export function safeRemoveFile(filePath) {
+    try {
+        if (fs.existsSync(filePath)) {
+            fs.rmSync(filePath);
+        }
+    } catch (err) {
+        console.error(chalk.orange(err));
+    }
+}
 
 export function isDirEmpty(dirPath) {
     if (!fs.existsSync(dirPath)) return true;

@@ -4,7 +4,7 @@ import { execSync } from "child_process";
 import chalk from "chalk";
 import process from "process";
 
-import { setUpFile, getCurrentDir, joinPreservedArrays, isBlank, safeRemove } from "./utils.js";
+import { setUpFile, getCurrentDir, joinPreservedArrays, isBlank, safeRemove, safeRemoveFile } from "./utils.js";
 
 chalk.orange = chalk.rgb(255, 81, 0);
 chalk.trueCyan = chalk.rgb(39, 185, 232);
@@ -275,10 +275,10 @@ export function removeServer(name, updateConfig = true) {
         return;
     }
 
-    fs.rmSync(`/etc/nginx/sites-available/http${name}`);
-    fs.rmSync(`/etc/nginx/sites-available/https${name}`);
-    fs.rmSync(`/etc/nginx/sites-enabled/http${name}`);
-    fs.rmSync(`/etc/nginx/sites-enabled/https${name}`);
+    safeRemoveFile(`/etc/nginx/sites-available/http${name}`);
+    safeRemoveFile(`/etc/nginx/sites-available/https${name}`);
+    safeRemoveFile(`/etc/nginx/sites-enabled/http${name}`);
+    safeRemoveFile(`/etc/nginx/sites-enabled/https${name}`);
 
     for (const service in serviceConfigJson) {
         const serviceConfigValues = serviceConfigJson[service];
