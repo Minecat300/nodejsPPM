@@ -89,7 +89,12 @@ export function safeRemove(targetPath) {
     const isForbidden = forbidden.some(p => {
         if (!p) return false;
         const normP = p.toLowerCase();
-        // Match exact or direct subdirectory (not just same prefix like C:\)
+
+        // Special handling for /home — allow subfolders like /home/minecat300/...
+        if (p === "/home" && normalizedResolved.startsWith("/home" + path.sep)) {
+            return false;
+        }
+
         return normalizedResolved === normP || normalizedResolved.startsWith(normP + path.sep.toLowerCase());
     });
 
