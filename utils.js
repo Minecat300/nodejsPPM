@@ -41,7 +41,7 @@ export function getHomeDir() {
                              path.join(process.env.HOMEDRIVE || "C:", process.env.HOMEPATH || "\\Users\\Default");
         } else {
             // Linux/macOS default home dir
-            currentHomeDir = process.env.HOME || os.homedir();
+            currentHomeDir = execSync(`getent passwd ${getUser()} | cut -d: -f6`).toString().trim();
         }
 
         // Final fallback, just in case
