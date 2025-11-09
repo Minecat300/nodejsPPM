@@ -74,7 +74,6 @@ export function safeRemove(targetPath) {
 
     const resolved = path.resolve(targetPath);
 
-    // Platform-specific forbidden paths
     const forbidden = process.platform === "win32"
         ? [
             "C:\\", "C:\\Windows", "C:\\Windows\\System32",
@@ -83,30 +82,17 @@ export function safeRemove(targetPath) {
         ]
         : ["/", "/root", "/home", "/etc", "/bin", "/usr", "/var"];
 
-    // Normalize comparison for Windows (case-insensitive)
     const normalizedResolved = process.platform === "win32" ? resolved.toLowerCase() : resolved;
 
+    // Only block the exact forbidden path, NOT subdirectories
     const isForbidden = forbidden.some(p => {
         if (!p) return false;
-        const normP = p.toLowerCase();
-
-        // Special handling for /home — allow subfolders like /home/minecat300/...
-        if (p === "/home" && normalizedResolved.startsWith("/home" + path.sep)) {
-            return false;
-        }
-
-        return normalizedResolved === normP || normalizedResolved.startsWith(normP + path.sep.toLowerCase());
+        const normP = process.platform === "win32" ? p.toLowerCase() : p;
+        return normalizedResolved === normP; // exact match only
     });
 
     if (isForbidden) {
-        console.log(forbidden, normalizedResolved);
         throw new Error(chalk.red(`Refusing to remove critical path: ${resolved}`));
-    }
-
-    // Prevent deleting very top-level folders (like C:\ or /something)
-    const depth = resolved.split(path.sep).filter(Boolean).length;
-    if (depth < 2) {
-        throw new Error(chalk.red(`Refusing to remove high-level path: ${resolved}`));
     }
 
     if (!fs.existsSync(resolved)) return;
@@ -117,6 +103,7 @@ export function safeRemove(targetPath) {
         console.error(chalk.red(`Failed to remove ${resolved}: ${err.message}`));
     }
 }
+
 
 export function safeRemoveFile(filePath) {
     try {
