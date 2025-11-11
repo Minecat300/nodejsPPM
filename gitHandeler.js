@@ -70,10 +70,20 @@ export async function getRepoUrlFromPath(repoPath) {
 export async function gitPullRepo(spinner, path) {
     const repoUrl = await getRepoUrlFromPath(path) ?? "Not found";
     const git = simpleGit(path);
-    spinner.text = `Pulling from ${repoUrl}`;
+
+    spinner.text = `Force pulling from ${repoUrl}`;
     try {
-        await git.pull();
-        spinner.text = `Pulled from ${repoUrl}`;
+        // Fetch all updates from remote
+        await git.fetch();
+
+        // Get current branch name
+        const status = await git.status();
+        const branch = status.current;
+
+        // Reset hard to remote branch, overwriting local changes
+        await git.reset(['--hard', `origin/${branch}`]);
+
+        spinner.text = `Force pulled from ${repoUrl}`;
     } catch (err) {
         throw err;
     }
