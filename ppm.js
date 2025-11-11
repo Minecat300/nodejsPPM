@@ -15,14 +15,16 @@ chalk.orange = chalk.rgb(255, 81, 0)
 chalk.trueCyan = chalk.rgb(39, 185, 232);
 
 function getPackageJson(dir) {
-    const packagePath = path.join(dir, "package.json");
-    if (!fs.existsSync(packagePath)) {
-        console.error(chalk.orange("No package.json was found! Can't continue."));
-        return;
-    }
+    try {
+        const packagePath = path.join(dir, "package.json");
+        if (!fs.existsSync(packagePath)) throw chalk.orange("No package.json was found! Can't continue.");
 
-    const pkg = JSON.parse(fs.readFileSync(packagePath, "utf8"));
-    return pkg;
+        const pkg = JSON.parse(fs.readFileSync(packagePath, "utf8"));
+        return pkg;
+
+    } catch (err) {
+        throw err;
+    }
 }
 
 function getAndCreateInstallPath(pkg, packageName, forceInstall = false) {
@@ -35,28 +37,25 @@ function getAndCreateInstallPath(pkg, packageName, forceInstall = false) {
         }
         if (!isDirEmpty(installPath)) {
             installPath = undefined;
-            throw new Error("Install path not empty");
+            throw chalk.orange("Install path not empty");
         }
         ensureDir(installPath);
         return installPath;
     } catch (err) {
-        console.error(chalk.orange(err));
         throw err;
     }
 }
 
 function moveFilesToInstallPath(installPath, tempDir) {
-    const spinner = ora(`Moving files to: ${installPath}`).start();
     try {
         const files = fs.readdirSync(tempDir);
         for (const file of files) {
             fs.renameSync(path.join(tempDir, file), path.join(installPath, file));
         }
         fs.rmdirSync(tempDir);
-        spinner.succeed(`Moved files to : ${installPath}`);
+        console.log(`Moved files to: ${installPath}`);
+
     } catch (err) {
-        spinner.fail("Failed to move files");
-        console.error(chalk.orange(err));
         throw err;
     }
 }
@@ -77,13 +76,11 @@ export function fixPermissions(installPath) {
 }
 
 function installDependancies(installPath) {
-    const spinner = ora("Installing dependancies...").start();
     try {
         execSync("npm install", { cwd: installPath, stdio: "inherit" });
-        spinner.succeed("Dependencies installed");
+        console.log("Dependencies installed");
+
     } catch (err) {
-        spinner.fail("npm install failed");
-        console.error(chalk.orange(err));
         throw err;
     }
 }
@@ -105,7 +102,6 @@ function addPackageData(pkg, installPath) {
         }
         fs.writeFileSync(packageDataPath, JSON.stringify(packageData, null, 2));
     } catch (err) {
-        console.error(chalk.orange(err));
         throw err;
     }
 }
@@ -117,7 +113,6 @@ function removePackageData(packageName) {
         delete packageData[packageName];
         fs.writeFileSync(packageDataPath, JSON.stringify(packageData, null, 2));
     } catch (err) {
-        console.error(chalk.orange(err));
         throw err;
     }
 }
@@ -142,7 +137,6 @@ export function addPm2Package(pkg, installPath) {
             });
         }
     } catch (err) {
-        console.error(chalk.orange(err));
         throw err;
     }
 }
@@ -156,7 +150,6 @@ export function removePm2Package(pkg) {
             execSync(`sudo -u ${user} pm2 delete ${pkg.pm2.name}`, { stdio: "inherit" });
         }
     } catch (err) {
-        console.error(chalk.orange(err));
         throw err;
     }
 }
@@ -170,7 +163,6 @@ export function restartPm2Package(pkg) {
             execSync(`sudo -u ${user} pm2 restart ${pkg.pm2.name}`, { stdio: "inherit" });
         }
     } catch (err) {
-        console.error(chalk.orange(err));
         throw err;
     }
 }
@@ -194,65 +186,50 @@ async function installPackage(user, repoName, branch, privateRepo, forceInstall)
         installDependancies(installPath);
         addPackageData(pkg, installPath);
         spinner.succeed(`Installed package: ${packageName}`);
-        if (pkg.nginx) {
-            addServiceFromPackage(pkg);
-        }
-        if (pkg.pm2) {
-            addPm2Package(pkg, installPath);
-        }
+
+        if (pkg.nginx) addServiceFromPackage(pkg);
+        if (pkg.pm2) addPm2Package(pkg, installPath);
+
     } catch (err) {
         safeRemove(tempDir);
 
-        if (installPath) {
-            safeRemove(installPath);
-        }
+        if (installPath) safeRemove(installPath);
 
         spinner.fail("Failed to install.");
-        console.error(err);
         throw err;
     }
 }
 
 function uninstallPackage(packageName) {
-    const packageDataPath = path.join(getCurrentDir(), "packageData.json");
-    const packageData = JSON.parse(fs.readFileSync(packageDataPath));
-
-    const pkg = packageData[packageName];
-    if (!pkg) {
-        console.error(chalk.orange(`Package ${packageName} was not found`));
-        return;
-    }
-
     const spinner = ora(`Uninstalling package: ${packageName}...`).start();
     try {
+        const packageDataPath = path.join(getCurrentDir(), "packageData.json");
+        const packageData = JSON.parse(fs.readFileSync(packageDataPath));
+
+        const pkg = packageData[packageName];
+        if (!pkg) throw chalk.orange(`Package ${packageName} was not found`);
+
         safeRemove(pkg.installPath);
         removePackageData(packageName);
         spinner.succeed(`Uninstalled package: ${packageName}`);
-        if (pkg.nginx) {
-            removeService(pkg.nginx.service.name);
-        }
-        if (pkg.pm2) {
-            removePm2Package(pkg);
-        }
+        if (pkg.nginx) removeService(pkg.nginx.service.name);
+        if (pkg.pm2) removePm2Package(pkg);
+    
     } catch (err) {
         spinner.fail("Failed to uninstall.");
-        console.error(err);
         throw err;
     }
 }
 
 async function updatePackage(packageName) {
-    const packageDataPath = path.join(getCurrentDir(), "packageData.json");
-    const packageData = JSON.parse(fs.readFileSync(packageDataPath));
-
-    const pkg = packageData[packageName];
-    if (!pkg) {
-        console.error(chalk.orange(`Package ${packageName} was not found`));
-        return;
-    }
-
     const spinner = ora(`Updating package: ${packageName}...`).start();
     try {
+        const packageDataPath = path.join(getCurrentDir(), "packageData.json");
+        const packageData = JSON.parse(fs.readFileSync(packageDataPath));
+
+        const pkg = packageData[packageName];
+        if (!pkg) throw chalk.orange(`Package ${packageName} was not found`);
+
         await gitPullRepo(pkg.installPath);
         installDependancies(pkg.installPath);
         removePackageData(packageName);
@@ -260,15 +237,12 @@ async function updatePackage(packageName) {
         addPackageData(pkgJson, pkg.installPath);
         console.log(chalk.green(`Version ${pkg.version} -> ${pkgJson.version}`));
         spinner.succeed(`Updated package: ${packageName}`);
-        if (pkgJson.nginx) {
-            addServiceFromPackage(pkgJson);
-        }
-        if (pkgJson.pm2) {
-            restartPm2Package(pkgJson);
-        }
+
+        if (pkgJson.nginx) addServiceFromPackage(pkgJson);
+        if (pkgJson.pm2) restartPm2Package(pkgJson);
+
     } catch (err) {
         spinner.fail("Failed to update.");
-        console.error(err);
         throw err;
     }
 }
@@ -282,7 +256,7 @@ function runPackage(packageName, commands) {
         const script = pkg.scripts.start;
         execSync(`${script} ${commands.join(" ")}`, { cwd: packageData[packageName].installPath,  stdio: "inherit" });
     } catch (err) {
-        console.error(chalk.orange(err));
+        throw err;
     }
 }
 
@@ -300,78 +274,63 @@ function nginxCommands(command, args) {
     const serverConfigPath = path.join(getCurrentDir(), "nginxServerConfig.json");
     const noreload = args.n || args.noreload;
 
-    if (command == "addService") {
-        try {
+    try {
+        if (command == "addService") {
             addNewService(args._[2], args._[3], replaceWithEmpty(args._[4], "/"), !args.http, stringToArray(args._[5]), !noreload);
-        } catch (err) {
-            console.error(chalk.orange(err));
-            throw err;
+            return;
         }
-        return;
-    }
-    if (command == "addServer") {
-        try {
+        if (command == "addServer") {
             addNewServer(args._[2], stringToArray(args._[3]), args._[4], args._[5], !noreload);
-        } catch (err) {
-            console.error(chalk.orange(err));
-            throw err;
+            return;
         }
-        return;
-    }
-    if (command == "removeService") {
-        try {
+        if (command == "removeService") {
             removeService(args._[2], !noreload);
-        } catch (err) {
-            console.error(chalk.orange(err));
-            throw err;
+            return;
         }
-        return;
-    }
-    if (command == "removeServer") {
-        try {
+        if (command == "removeServer") {
+
             removeServer(args._[2], !noreload);
-        } catch (err) {
-            console.error(chalk.orange(err));
-            throw err;
+            return;
         }
-        return;
-    }
-    if (command == "reload") {
-        const spinner = ora("Reloading Nginx config...").start();
-        try {
-            updateNginxConfig();
-            spinner.succeed("Reloaded Nginx");
-        } catch (err) {
-            spinner.fail("Failed to reload nginx confix");
-            console.error(chalk.orange(err));
-            throw err;
+        if (command == "reload") {
+            const spinner = ora("Reloading Nginx config...").start();
+            try {
+                updateNginxConfig();
+                spinner.succeed("Reloaded Nginx");
+            } catch (err) {
+                spinner.fail("Failed to reload nginx confix");
+                throw err;
+            }
+            return;
         }
-        return;
+        if (command == "listServices") {
+            const serviceConfigJson = JSON.parse(fs.readFileSync(serviceConfigPath));
+            console.log(chalk.trueCyan("Nginx Services:"));
+            printTable(prependToKeyValue(serviceConfigJson, "uri", "/"), args._[2] ? stringToArray(args._[2]) : ["port", "uri", "https", "servers"], args._[2] ? 100 : 30);
+            return;
+        }
+        if (command == "listServers") {
+            const serverConfigJson = JSON.parse(fs.readFileSync(serverConfigPath));
+            console.log(chalk.trueCyan("Nginx Servers:"));
+            printTable(serverConfigJson, args._[2] ? stringToArray(args._[2]) : ["urls", "certificate", "certificateKey"], args._[2] ? 100 : 30);
+            return;
+        }
+        if (command == "help" || command == "h" || command == "?" || !command) {
+            console.log(chalk.trueCyan("Nginx Commands:"));
+            console.log("ppm nginx", chalk.trueCyan("addService"), "<name> <port> <uri> <servers>       [--http] [--noreload, -n]");
+            console.log("ppm nginx", chalk.trueCyan("addServer"), "<name> <urls> <certificate> <certificate key> [--noreload, -n]");
+            console.log("ppm nginx", chalk.trueCyan("removeService"), "<service name>                            [--noreload, -n]");
+            console.log("ppm nginx", chalk.trueCyan("removeServer"), "<server name>                              [--noreload, -n]");
+            console.log("ppm nginx", chalk.trueCyan("reload"));
+            console.log("ppm nginx", chalk.trueCyan("listServices"), "<Item (optional)>");
+            console.log("ppm nginx", chalk.trueCyan("listServers"), "<Item (optional)>");
+            return;
+        }
+        console.log(chalk.trueCyan('Unknown Nginx Command. "ppm nginx help" for help'));
+
+    } catch (err) {
+        throw err;
     }
-    if (command == "listServices") {
-        const serviceConfigJson = JSON.parse(fs.readFileSync(serviceConfigPath));
-        console.log(chalk.trueCyan("Nginx Services:"));
-        printTable(prependToKeyValue(serviceConfigJson, "uri", "/"), args._[2] ? stringToArray(args._[2]) : ["port", "uri", "https", "servers"], args._[2] ? 100 : 30);
-        return;
-    }
-    if (command == "listServers") {
-        const serverConfigJson = JSON.parse(fs.readFileSync(serverConfigPath));
-        console.log(chalk.trueCyan("Nginx Servers:"));
-        printTable(serverConfigJson, args._[2] ? stringToArray(args._[2]) : ["urls", "certificate", "certificateKey"], args._[2] ? 100 : 30);
-        return;
-    }
-    if (command == "help" || command == "h" || command == "?" || !command) {
-        console.log(chalk.trueCyan("Nginx Commands:"));
-        console.log("ppm nginx", chalk.trueCyan("addService"), "<name> <port> <uri> <servers>       [--http] [--noreload, -n]");
-        console.log("ppm nginx", chalk.trueCyan("addServer"), "<name> <urls> <certificate> <certificate key> [--noreload, -n]");
-        console.log("ppm nginx", chalk.trueCyan("removeService"), "<service name>                            [--noreload, -n]");
-        console.log("ppm nginx", chalk.trueCyan("removeServer"), "<server name>                              [--noreload, -n]");
-        console.log("ppm nginx", chalk.trueCyan("reload"));
-        console.log("ppm nginx", chalk.trueCyan("listServices"), "<Item (optional)>");
-        console.log("ppm nginx", chalk.trueCyan("listServers"), "<Item (optional)>");
-        return;
-    }
-    console.log(chalk.trueCyan('Unknown Nginx Command. "ppm nginx help" for help'));
 }
 
 export function setup() {
@@ -397,73 +356,69 @@ export async function main() {
 
     const command = args._[0];
 
-    if (command == "install") {
-        const user = args._[1];
-        const repoName = args._[2];
-        const privateRepo = args.p || args.private;
-        const forceInstall = args.f || args.force;
-        const branch = args.branch || "main";
-        if (!user) {
-            console.error(chalk.orange("No user was provided"));
-            return;
-        }
-        if (!repoName) {
-            console.error(chalk.orange("No repository name was provided"));
-            return;
-        }
+    try {
+        if (command == "install") {
+            const user = args._[1];
+            const repoName = args._[2];
+            const privateRepo = args.p || args.private;
+            const forceInstall = args.f || args.force;
+            const branch = args.branch || "main";
+            if (!user) {
+                console.error(chalk.orange("No user was provided"));
+                return;
+            }
+            if (!repoName) {
+                console.error(chalk.orange("No repository name was provided"));
+                return;
+            }
 
-        await installPackage(user, repoName, branch, privateRepo, forceInstall);
-        return;
-    }
-    if (command == "uninstall") {
-        const packageName = args._[1];
-        if (!packageName) {
-            console.error(chalk.orange("No package name was provided"));
+            await installPackage(user, repoName, branch, privateRepo, forceInstall);
             return;
         }
+        if (command == "uninstall") {
+            const packageName = args._[1];
+            if (!packageName) throw chalk.orange("No package name was provided");
 
-        uninstallPackage(packageName);
-        return;
-    }
-    if (command == "update") {
-        const packageName = args._[1];
-        if (!packageName) {
-            console.error(chalk.orange("No package name was provided"));
+            uninstallPackage(packageName);
             return;
         }
+        if (command == "update") {
+            const packageName = args._[1];
+            if (!packageName) throw chalk.orange("No package name was provided");
 
-        updatePackage(packageName);
-        return;
-    }
-    if (command == "run") {
-        const packageName = args._[1];
-        if (!packageName) {
-            console.error(chalk.orange("No package name was provided"));
+            updatePackage(packageName);
             return;
         }
+        if (command == "run") {
+            const packageName = args._[1];
+            if (!packageName) chalk.orange("No package name was provided");
 
-        runPackage(packageName, process.argv.slice(4));
-        return;
+            runPackage(packageName, process.argv.slice(4));
+            return;
+        }
+        if (command == "list") {
+            const packageData = JSON.parse(fs.readFileSync(packageDataPath));
+            console.log(chalk.trueCyan("Packages:"));
+            printTable(packageData, args._[1] ? stringToArray(args._[1]) : ["version", "description", "installPath"], args._[1] ? 100 : 40);
+            return;
+        }
+        if (command == "nginx") {
+            nginxCommands(args._[1], args);
+            return;
+        }
+        if (command == "help" || command == "h" || command == "?" || !command) {
+            console.log(chalk.trueCyan("Commands: "));
+            console.log("ppm", chalk.trueCyan("install"), "<username/orginisation> <Repository name> [--private, -p] [--force, -f] [--branch <branch>]");
+            console.log("ppm", chalk.trueCyan("uninstall"), "<Package name>");
+            console.log("ppm", chalk.trueCyan("update"), "<Package name>");
+            console.log("ppm", chalk.trueCyan("run"), "<Package name>");
+            console.log("ppm", chalk.trueCyan("list"), "<Item (optional)>");
+            console.log("ppm", chalk.trueCyan("nginx"), "<Nginx command>");
+            return;
+        }
+        console.log(chalk.trueCyan('Unknown Command. "ppm help" for help'));
+
+    } catch (err) {
+        console.error(err);
     }
-    if (command == "list") {
-        const packageData = JSON.parse(fs.readFileSync(packageDataPath));
-        console.log(chalk.trueCyan("Packages:"));
-        printTable(packageData, args._[1] ? stringToArray(args._[1]) : ["version", "description", "installPath"], args._[1] ? 100 : 40);
-        return;
-    }
-    if (command == "nginx") {
-        nginxCommands(args._[1], args);
-        return;
-    }
-    if (command == "help" || command == "h" || command == "?" || !command) {
-        console.log(chalk.trueCyan("Commands: "));
-        console.log("ppm", chalk.trueCyan("install"), "<username/orginisation> <Repository name> [--private, -p] [--force, -f] [--branch <branch>]");
-        console.log("ppm", chalk.trueCyan("uninstall"), "<Package name>");
-        console.log("ppm", chalk.trueCyan("update"), "<Package name>");
-        console.log("ppm", chalk.trueCyan("run"), "<Package name>");
-        console.log("ppm", chalk.trueCyan("list"), "<Item (optional)>");
-        console.log("ppm", chalk.trueCyan("nginx"), "<Nginx command>");
-        return;
-    }
-    console.log(chalk.trueCyan('Unknown Command. "ppm help" for help'));
 }

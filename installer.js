@@ -13,16 +13,18 @@ const isWindows = platform === "win32";
 const isLinux = platform === "linux";
 
 if (platform === "darwin") {
-    throw new Error("This software is not supported on MacOS. Please get a real pc");
+    console.error("This software is not supported on MacOS. Please get a real pc");
+    process.exit(1);
 }
 
 if (!isWindows && !isLinux) {
-    throw new Error(`This software is not supported on ${platform}.`);
+    console.error(`This software is not supported on ${platform}.`);
+    process.exit(1);
 }
 
 const pkgPath = path.join(__dirname, "package.json");
 if (!fs.existsSync(pkgPath)) {
-    console.log("No package.json found in this folder. Exiting...");
+    console.error("No package.json found in this folder. Exiting...");
     process.exit(1);
 }
 

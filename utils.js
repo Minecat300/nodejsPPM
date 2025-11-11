@@ -70,7 +70,7 @@ export function ensureDir(dir) {
 }
 
 export function safeRemove(targetPath) {
-    if (!targetPath) throw new Error(chalk.orange("No path provided."));
+    if (!targetPath) throw chalk.orange("No path provided.");
 
     const resolved = path.resolve(targetPath);
 
@@ -92,7 +92,7 @@ export function safeRemove(targetPath) {
     });
 
     if (isForbidden) {
-        throw new Error(chalk.red(`Refusing to remove critical path: ${resolved}`));
+        throw chalk.red(`Refusing to remove critical path: ${resolved}`);
     }
 
     if (!fs.existsSync(resolved)) return;
@@ -100,7 +100,7 @@ export function safeRemove(targetPath) {
     try {
         fs.rmSync(resolved, { recursive: true, force: true });
     } catch (err) {
-        console.error(chalk.red(`Failed to remove ${resolved}: ${err.message}`));
+        throw chalk.red(`Failed to remove ${resolved}: ${err.message}`);
     }
 }
 
@@ -111,7 +111,7 @@ export function safeRemoveFile(filePath) {
             fs.rmSync(filePath);
         }
     } catch (err) {
-        console.error(chalk.orange(err));
+        throw err;
     }
 }
 

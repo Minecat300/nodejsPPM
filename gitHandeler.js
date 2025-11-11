@@ -15,7 +15,7 @@ function getRepoUrl(user, repoName, privateRepo = false) {
 }
 
 export async function cloneRepo(cloneDir, user, repoName, branch = "main", privateRepo = false) {
-    const spinner = ora(`Cloning ${repoName}...`).start();
+    console.log(`Cloning ${repoName}...`);
     const url = getRepoUrl(user, repoName, privateRepo);
 
     try {
@@ -30,25 +30,23 @@ export async function cloneRepo(cloneDir, user, repoName, branch = "main", priva
             // Timeout after 30 seconds
             const timeout = setTimeout(() => {
                 gitProcess.kill();
-                reject(new Error("Clone timed out"));
+                reject(chalk.orange("Clone timed out"));
             }, 30000);
 
             gitProcess.on("exit", (code) => {
                 clearTimeout(timeout);
                 if (code === 0) resolve();
-                else reject(new Error(stderr || `Git clone failed with exit code ${code}`));
+                else reject(chalk.orange(stderr || `Git clone failed with exit code ${code}`));
             });
 
             gitProcess.on("error", (err) => {
                 clearTimeout(timeout);
-                reject(err);
+                reject(chalk.orange(err));
             });
         });
 
-        spinner.succeed(`Cloned ${repoName}!`);
+        console.log(`Cloned ${repoName}!`);
     } catch (err) {
-        spinner.fail(`Failed to clone ${repoName}`);
-        console.error(chalk.orange(err.message));
         throw err;
     }
 }
@@ -65,7 +63,6 @@ export async function getRepoUrlFromPath(repoPath) {
             return null;
         }
     } catch (err) {
-        console.error(chalk.orange("Failed to get remote URL:"), chalk.orange(err));
         throw err;
     }
 }
@@ -73,13 +70,11 @@ export async function getRepoUrlFromPath(repoPath) {
 export async function gitPullRepo(path) {
     const repoUrl = await getRepoUrlFromPath(path) ?? "Not found";
     const git = simpleGit(path);
-    const spinner = ora(`Pulling from ${repoUrl}`).start();
+    console.log(`Pulling from ${repoUrl}`);
     try {
         await git.pull();
-        spinner.succeed(`Pulled from ${repoUrl}`);
+        console.log(`Pulled from ${repoUrl}`);
     } catch (err) {
-        spinner.fail(`Failed to pull from ${repoUrl}`);
-        console.error(chalk.orange(err));
         throw err;
     }
 }

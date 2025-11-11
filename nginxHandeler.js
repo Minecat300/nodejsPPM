@@ -18,6 +18,17 @@ export function hasNginx() {
     }
 }
 
+function normalizePath(path) {
+    if (typeof path !== 'string') path = String(path || '');
+
+    path = path.trim();
+
+    if (!path || /^\/+$/.test(path)) return '/';
+
+    return `/${path.replace(/^\/+|\/+$/g, '')}/`;
+}
+
+
 export function nginxSetup() {
     if (process.platform === "win32") {
         console.warn(chalk.yellow("NGINX is not supported on Windows with PPM."));
@@ -108,7 +119,7 @@ server {
 
             const httpType = serviceConfigValues.https ? "https" : "http";
             fullConfig += `
-    location /${serviceConfigValues.uri} {
+    location ${normalizePath(serviceConfigValues.uri)} {
         # Handle CORS preflight requests
         if ($request_method = OPTIONS ) {
             add_header 'Access-Control-Allow-Origin' '*' always;
@@ -150,9 +161,8 @@ server {
 }
 
 export function updateNginxConfig(reload = true) {
-    if (process.platform === "win32") {
-        return;
-    }
+    if (process.platform === "win32") return;
+
     if (!hasNginx()) {
         console.warn(chalk.yellow("NGINX is not installed on this system. Please install NGINX for its functions."));
         return;
@@ -166,29 +176,15 @@ export function updateNginxConfig(reload = true) {
 }
 
 export function addNewService(name, port, uri, https = true, servers, updateConfig = true) {
-    if (process.platform === "win32") {
-        return;
-    }
-    if (isBlank(name)) {
-        console.error(chalk.orange("Name missing"));
-        return;
-    }
-    if (port === undefined || port === null) {
-        console.error(chalk.orange("Port missing"));
-        return;
-    }
-    if (typeof port !== "number") {
-        console.error(chalk.orange("Port must be a number"));
-        return;
-    }
-    if (uri === undefined || uri === null) {
-        console.error(chalk.orange("Uri missing"));
-        return;
-    }
-    if (!Array.isArray(servers) || servers.length === 0) {
-        console.error(chalk.orange("Servers missing"));
-        return;
-    }
+    if (process.platform === "win32") return;
+
+    if (isBlank(name)) throw chalk.orange("Name missing");
+
+    if (port === undefined || port === null) throw chalk.orange("Port missing");
+    if (typeof port !== "number") throw chalk.orange("Port must be a number");
+
+    if (uri === undefined || uri === null) throw chalk.orange("Uri missing");
+    if (!Array.isArray(servers) || servers.length === 0) throw chalk.orange("Servers missing");
 
     const serviceConfigPath = path.join(getCurrentDir(), "nginxServiceConfig.json");
     const serviceConfigJson = JSON.parse(fs.readFileSync(serviceConfigPath, "utf8"));
@@ -208,36 +204,24 @@ export function addNewService(name, port, uri, https = true, servers, updateConf
 }
 
 export function removeService(name, updateConfig = true) {
-    if (process.platform === "win32") {
-        return;
-    }
-    if (!name) {
-        console.error(chalk.orange("Name missing"));
-        return;
-    }
+    if (process.platform === "win32") return;
+
+    if (!name) throw chalk.orange("Name missing");
+
     const serviceConfigPath = path.join(getCurrentDir(), "nginxServiceConfig.json");
     const serviceConfigJson = JSON.parse(fs.readFileSync(serviceConfigPath, "utf8"));
-    if (!serviceConfigJson[name]) {
-        console.error(chalk.orange(`${name} not found`));
-        return;
-    }
+    if (!serviceConfigJson[name]) throw chalk.orange(`${name} not found`);
+
     delete serviceConfigJson[name];
     fs.writeFileSync(serviceConfigPath, JSON.stringify(serviceConfigJson, null, 2));
     updateNginxConfig(updateConfig);
 }
 
 export function addNewServer(name, urls, certificate, certificateKey, updateConfig = true) {
-    if (process.platform === "win32") {
-        return;
-    }
-    if (isBlank(name)) {
-        console.error(chalk.orange("name missing"));
-        return;
-    }
-    if (!Array.isArray(urls) || urls.length === 0) {
-        console.error(chalk.orange("urls missing"));
-        return;
-    }
+    if (process.platform === "win32") return;
+
+    if (isBlank(name)) throw chalk.orange("name missing");
+    if (!Array.isArray(urls) || urls.length === 0) throw chalk.orange("urls missing");
 
     const serverConfigPath = path.join(getCurrentDir(), "nginxServerConfig.json");
     const serverConfigJson = JSON.parse(fs.readFileSync(serverConfigPath, "utf8"));
@@ -258,22 +242,16 @@ export function addNewServer(name, urls, certificate, certificateKey, updateConf
 }
 
 export function removeServer(name, updateConfig = true) {
-    if (process.platform === "win32") {
-        return;
-    }
-    if (!name) {
-        console.error(chalk.orange("Name missing"));
-        return;
-    }
+    if (process.platform === "win32") return;
+
+    if (!name) throw chalk.orange("Name missing");
+
     const serverConfigPath = path.join(getCurrentDir(), "nginxServerConfig.json");
     const serviceConfigPath = path.join(getCurrentDir(), "nginxServiceConfig.json");
     const serverConfigJson = JSON.parse(fs.readFileSync(serverConfigPath, "utf8"));
     const serviceConfigJson = JSON.parse(fs.readFileSync(serviceConfigPath, "utf8"));
 
-    if (!serverConfigJson[name]) {
-        console.error(chalk.orange(`${name} not found`));
-        return;
-    }
+    if (!serverConfigJson[name]) throw chalk.orange(`${name} not found`);
 
     safeRemoveFile(`/etc/nginx/sites-available/http${name}`);
     safeRemoveFile(`/etc/nginx/sites-available/https${name}`);
@@ -296,25 +274,18 @@ export function removeServer(name, updateConfig = true) {
 }
 
 export function addServiceFromPackage(pkg, updateConfig = true) {
-    if (process.platform === "win32") {
-        return;
-    }
-    if (!pkg.nginx) {
-        console.error(chalk.orange("Nginx config missing"));
-        return;
-    }
+    if (process.platform === "win32") return;
+
+    if (!pkg.nginx) throw chalk.orange("Nginx config missing");
     const nginx = pkg.nginx;
-    if (!nginx.service) {
-        console.error(chalk.orange("service missing"));
-        return;
-    }
+
+    if (!nginx.service) throw chalk.orange("service missing");
     const service = nginx.service;
+
     for (const server of service.servers) {
-        if (!nginx[server]) {
-            console.error(chalk.orange("Server('s) missing"));
-            return;
-        }
+        if (!nginx[server]) throw chalk.orange("Server('s) missing");
     }
+    
     for (const server of service.servers) {
         const serverData = nginx[server];
         addNewServer(server, serverData.urls, serverData.certificate, serverData.certificateKey, false);
