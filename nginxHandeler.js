@@ -286,19 +286,19 @@ export async function addServiceFromPackage(pkg, updateConfig = true) {
 
     let servers = service.servers;
 
-    if (servers == "ask") {
-        const serverPath = path.join(getCurrentDir(), "nginxServerConfig.json")
-        const allServers = Object.keys(JSON.parse(fs.readFileSync(serverPath)));
-        servers = await getServerSelection(allServers);
-    }
+    const serverPath = path.join(getCurrentDir(), "nginxServerConfig.json")
+    const allServers = JSON.parse(fs.readFileSync(serverPath));
+
+    if (servers == "ask") servers = await getServerSelection(Object.keys(allServers));
 
     if (servers.length === 0) throw chalk.orange("No Servers selected");
 
     for (const server of servers) {
-        if (!nginx[server]) throw chalk.orange("Server('s) missing");
+        if (!nginx[server] && !allServers[server]) throw chalk.orange("Server('s) missing");
     }
 
     for (const server of servers) {
+        if (!nginx[server]) continue;
         const serverData = nginx[server];
         addNewServer(server, serverData.urls, serverData.certificate, serverData.certificateKey, false);
     }
