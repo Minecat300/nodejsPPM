@@ -236,7 +236,7 @@ async function updatePackage(packageName) {
         removePackageData(packageName);
         const pkgJson = getPackageJson(pkg.installPath);
         addPackageData(pkgJson, pkg.installPath);
-        console.log(chalk.green(`Version ${pkg.version} -> ${pkgJson.version}`));
+        console.log("\n" + chalk.green(`Version ${pkg.version} -> ${pkgJson.version}`));
         spinner.succeed(`Updated package: ${packageName}`);
 
         if (pkgJson.nginx) await addServiceFromPackage(pkgJson);
