@@ -292,6 +292,8 @@ export async function addServiceFromPackage(pkg, updateConfig = true) {
         servers = await getServerSelection(allServers);
     }
 
+    if (servers.length === 0) throw chalk.orange("No Servers selected");
+
     for (const server of servers) {
         if (!nginx[server]) throw chalk.orange("Server('s) missing");
     }
@@ -333,7 +335,7 @@ async function getServerSelection(servers) {
             console.log("Opperation Cancelled");
         }
 
-        console.log(awnser.actions);
+        return awnser.actions;
     } catch (err) {
         throw "Cancelled";
     }
