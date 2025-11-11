@@ -46,14 +46,15 @@ function getAndCreateInstallPath(pkg, packageName, forceInstall = false) {
     }
 }
 
-function moveFilesToInstallPath(installPath, tempDir) {
+function moveFilesToInstallPath(spinner, installPath, tempDir) {
+    spinner.text = `Moving files to: ${installPath}`
     try {
         const files = fs.readdirSync(tempDir);
         for (const file of files) {
             fs.renameSync(path.join(tempDir, file), path.join(installPath, file));
         }
         fs.rmdirSync(tempDir);
-        console.log(`Moved files to: ${installPath}`);
+        spinner.text = `Moved files to: ${installPath}`;
 
     } catch (err) {
         throw err;
@@ -177,11 +178,11 @@ async function installPackage(user, repoName, branch, privateRepo, forceInstall)
 
     try {
         ensureDir(tempDir);
-        await cloneRepo(tempDir, user, repoName, branch, privateRepo);
+        await cloneRepo(spinner, tempDir, user, repoName, branch, privateRepo);
         const pkg = getPackageJson(tempDir);
         const packageName = pkg.name || repoName;
         installPath = getAndCreateInstallPath(pkg, packageName, forceInstall);
-        moveFilesToInstallPath(installPath, tempDir);
+        moveFilesToInstallPath(spinner, installPath, tempDir);
         fixPermissions(installPath);
         installDependancies(installPath);
         addPackageData(pkg, installPath);
@@ -230,7 +231,7 @@ async function updatePackage(packageName) {
         const pkg = packageData[packageName];
         if (!pkg) throw chalk.orange(`Package ${packageName} was not found`);
 
-        await gitPullRepo(pkg.installPath);
+        await gitPullRepo(spinner, pkg.installPath);
         installDependancies(pkg.installPath);
         removePackageData(packageName);
         const pkgJson = getPackageJson(pkg.installPath);

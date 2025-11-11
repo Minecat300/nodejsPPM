@@ -14,8 +14,8 @@ function getRepoUrl(user, repoName, privateRepo = false) {
     return repoUrl;
 }
 
-export async function cloneRepo(cloneDir, user, repoName, branch = "main", privateRepo = false) {
-    console.log(`Cloning ${repoName}...`);
+export async function cloneRepo(spinner, cloneDir, user, repoName, branch = "main", privateRepo = false) {
+    spinner.text = `Cloning ${repoName}...`;
     const url = getRepoUrl(user, repoName, privateRepo);
 
     try {
@@ -45,7 +45,7 @@ export async function cloneRepo(cloneDir, user, repoName, branch = "main", priva
             });
         });
 
-        console.log(`Cloned ${repoName}!`);
+        spinner.text = `Cloned ${repoName}!`;
     } catch (err) {
         throw err;
     }
@@ -67,13 +67,13 @@ export async function getRepoUrlFromPath(repoPath) {
     }
 }
 
-export async function gitPullRepo(path) {
+export async function gitPullRepo(spinner, path) {
     const repoUrl = await getRepoUrlFromPath(path) ?? "Not found";
     const git = simpleGit(path);
-    console.log(`Pulling from ${repoUrl}`);
+    spinner.text = `Pulling from ${repoUrl}`;
     try {
         await git.pull();
-        console.log(`Pulled from ${repoUrl}`);
+        spinner.text = `Pulled from ${repoUrl}`;
     } catch (err) {
         throw err;
     }
