@@ -188,7 +188,7 @@ async function installPackage(user, repoName, branch, privateRepo, forceInstall)
         addPackageData(pkg, installPath);
         spinner.succeed(`Installed package: ${packageName}`);
 
-        if (pkg.nginx) addServiceFromPackage(pkg);
+        if (pkg.nginx) await addServiceFromPackage(pkg);
         if (pkg.pm2) addPm2Package(pkg, installPath);
 
     } catch (err) {
@@ -239,7 +239,7 @@ async function updatePackage(packageName) {
         console.log(chalk.green(`Version ${pkg.version} -> ${pkgJson.version}`));
         spinner.succeed(`Updated package: ${packageName}`);
 
-        if (pkgJson.nginx) addServiceFromPackage(pkgJson);
+        if (pkgJson.nginx) await addServiceFromPackage(pkgJson);
         if (pkgJson.pm2) restartPm2Package(pkgJson);
 
     } catch (err) {

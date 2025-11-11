@@ -3,8 +3,10 @@ import path from "path";
 import { execSync } from "child_process";
 import chalk from "chalk";
 import process from "process";
+import inquirer from "inquirer";
 
 import { setUpFile, getCurrentDir, joinPreservedArrays, isBlank, safeRemove, safeRemoveFile } from "./utils.js";
+import { type } from "os";
 
 chalk.orange = chalk.rgb(255, 81, 0);
 chalk.trueCyan = chalk.rgb(39, 185, 232);
@@ -273,7 +275,7 @@ export function removeServer(name, updateConfig = true) {
     updateNginxConfig(updateConfig);
 }
 
-export function addServiceFromPackage(pkg, updateConfig = true) {
+export async function addServiceFromPackage(pkg, updateConfig = true) {
     if (process.platform === "win32") return;
 
     if (!pkg.nginx) throw chalk.orange("Nginx config missing");
@@ -282,13 +284,57 @@ export function addServiceFromPackage(pkg, updateConfig = true) {
     if (!nginx.service) throw chalk.orange("service missing");
     const service = nginx.service;
 
-    for (const server of service.servers) {
+    let servers = service.servers;
+
+    if (servers == "ask") {
+        const serverPath = path.join(getCurrentDir(), "nginxServerConfig.json")
+        const allServers = Object.keys(JSON.parse(fs.readFileSync(serverPath)));
+        servers = await getServerSelection(allServers);
+    }
+
+    for (const server of servers) {
         if (!nginx[server]) throw chalk.orange("Server('s) missing");
     }
-    
-    for (const server of service.servers) {
+
+    for (const server of servers) {
         const serverData = nginx[server];
         addNewServer(server, serverData.urls, serverData.certificate, serverData.certificateKey, false);
     }
-    addNewService(service.name, service.port, service.uri, service.https, service.servers, updateConfig);
+    addNewService(service.name, service.port, service.uri, service.https, servers, updateConfig);
+}
+
+async function getServerSelection(servers) {
+    const choices = servers.concat([
+        new inquirer.Separator(),
+        "Cancel"
+    ]);
+
+    try {
+        const awnser = await inquirer.prompt([
+            {
+                type: "checkbox",
+                name: "actions",
+                message: "Select server(s) to use (space to toggle, enter to confirm):",
+                choices: choices,
+                pageSize: 10,
+                validate: (selected) => {
+                    if (selected.includes("Cancel")) {
+                        return true;
+                    }
+                    if (selected.length === 0) {
+                        return "You must select at least one option, or Cancel.";
+                    }
+                    return true;
+                }
+            }
+        ]);
+
+        if (awnser.actions.includes("Cancel") || awnser.actions.length === 0) {
+            console.log("Opperation Cancelled");
+        }
+
+        console.log(awnser.actions);
+    } catch (err) {
+        throw "Cancelled";
+    }
 }
