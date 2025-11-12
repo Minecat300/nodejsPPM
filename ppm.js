@@ -194,9 +194,11 @@ async function installPackage(user, repoName, branch, privateRepo, forceInstall)
         installDependancies(installPath);
         addPackageData(pkg, installPath);
         spinner.succeed(`Installed package: ${packageName}`);
+        const newInstallPath = installPath;
+        installPath = undefined;
 
         if (pkg.nginx) await addServiceFromPackage(pkg);
-        if (pkg.pm2) addPm2Package(pkg, installPath);
+        if (pkg.pm2) addPm2Package(pkg, newInstallPath);
 
     } catch (err) {
         safeRemove(tempDir);
