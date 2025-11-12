@@ -52,7 +52,7 @@ export function getHomeDir() {
         // Final fallback, just in case
         if (!currentHomeDir) currentHomeDir = os.homedir();
     }
-
+    console.log(currentHomeDir, os.homedir())
     return currentHomeDir;
 }
 
