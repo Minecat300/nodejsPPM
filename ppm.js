@@ -8,7 +8,7 @@ import { execSync, exec } from "child_process";
 import process from "process";
 
 import { expandHomeDir, getCurrentDir, setUpFile, printTable, safeRemove, ensureDir, isDirEmpty, prependToKeyValue, stringToArray, getUser, getHomeDir, replaceWithEmpty } from "./utils.js";
-import { nginxSetup, addServiceFromPackage, removeService, removeServer, addNewService, addNewServer, updateNginxConfig, hasNginx } from "./nginxHandeler.js";
+import { nginxSetup, addServiceFromPackage, removeService, removeServer, addNewService, addNewServer, updateNginxConfig, hasNginx, updateServiceFromPackage } from "./nginxHandeler.js";
 import { cloneRepo, gitPullRepo } from "./gitHandeler.js";
 
 chalk.orange = chalk.rgb(255, 81, 0)
@@ -232,7 +232,7 @@ async function updatePackage(packageName) {
         console.log("\n" + chalk.green(`Version ${pkg.version} -> ${pkgJson.version}`));
         spinner.succeed(`Updated package: ${packageName}`);
 
-        if (pkgJson.nginx) await addServiceFromPackage(pkgJson);
+        if (pkgJson.nginx) await updateServiceFromPackage(pkgJson);
         if (pkgJson.pm2) restartPm2Package(pkgJson);
 
     } catch (err) {

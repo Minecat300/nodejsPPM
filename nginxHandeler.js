@@ -304,6 +304,36 @@ export async function addServiceFromPackage(pkg, updateConfig = true) {
     addNewService(service.name, service.port, service.uri, service.https, servers, updateConfig);
 }
 
+export async function updateServiceFromPackage(pkg, updateConfig = true) {
+    if (process.platform === "win32") return;
+
+    if (!pkg.nginx) throw chalk.orange("Nginx config missing");
+    const nginx = pkg.nginx;
+
+    if (!nginx.service) throw chalk.orange("service missing");
+    const service = nginx.service;
+
+    let servers = service.servers;
+
+    const serverPath = path.join(getCurrentDir(), "nginxServerConfig.json")
+    const allServers = JSON.parse(fs.readFileSync(serverPath));
+
+    if (servers == "ask") return;
+
+    if (servers.length === 0) throw chalk.orange("No Servers selected");
+
+    for (const server of servers) {
+        if (!nginx[server] && !allServers[server]) throw chalk.orange("Server('s) missing");
+    }
+
+    for (const server of servers) {
+        if (!nginx[server]) continue;
+        const serverData = nginx[server];
+        addNewServer(server, serverData.urls, serverData.certificate, serverData.certificateKey, false);
+    }
+    addNewService(service.name, service.port, service.uri, service.https, servers, updateConfig);
+}
+
 async function getServerSelection(servers) {
     const choices = servers.concat([
         new inquirer.Separator(),
