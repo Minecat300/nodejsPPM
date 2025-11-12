@@ -74,18 +74,45 @@ export async function getRepoUrlFromPath(repoPath) {
     }
 }
 
-export async function gitPullRepo(spinner, path) {
-    const repoUrl = (await getRepoUrlFromPath(path)) ?? "Not found";
-    const git = simpleGit(path);
+export async function gitPullRepo(spinner, repoPath) {
+    const repoUrl = (await getRepoUrlFromPath(repoPath)) ?? "Not found";
+    const git = simpleGit(repoPath);
 
     spinner.text = `Force pulling from ${repoUrl}`;
     try {
+        // Step 1: Save executable permissions
+        const execFiles = [];
+        function checkExecutable(filePath) {
+            try {
+                const stat = fs.statSync(filePath);
+                if (stat.isFile() && (stat.mode & 0o111)) {
+                    execFiles.push(filePath);
+                }
+            } catch {}
+        }
+
+        function walkDir(dir) {
+            for (const f of fs.readdirSync(dir)) {
+                const fullPath = path.join(dir, f);
+                const stat = fs.statSync(fullPath);
+                if (stat.isDirectory()) walkDir(fullPath);
+                else checkExecutable(fullPath);
+            }
+        }
+        walkDir(repoPath);
+
+        // Step 2: Fetch updates
         await git.fetch();
 
+        // Step 3: Force reset
         const status = await git.status();
         const branch = status.current;
-
         await git.reset(["--hard", `origin/${branch}`]);
+
+        // Step 4: Restore executable permissions
+        for (const file of execFiles) {
+            fs.chmodSync(file, fs.statSync(file).mode | 0o111);
+        }
 
         spinner.text = `Force pulled from ${repoUrl}`;
     } catch (err) {
