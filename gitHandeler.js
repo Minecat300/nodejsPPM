@@ -2,16 +2,24 @@ import { spawn } from "child_process";
 import simpleGit from "simple-git";
 import ora from "ora";
 import chalk from "chalk";
+import os from "os";
 
 import { expandHomeDir, getCurrentDir, setUpFile, printTable, safeRemove, ensureDir } from "./utils.js";
 
 chalk.orange = chalk.rgb(255, 81, 0);
 chalk.trueCyan = chalk.rgb(39, 185, 232);
 
+// Detect the original non-root user
+const originalUser = process.env.SUDO_USER || process.env.USER;
+const userInfo = os.userInfo({ username: originalUser });
+const UID = userInfo.uid;
+const GID = userInfo.gid;
+
 function getRepoUrl(user, repoName, privateRepo = false) {
     repoName = repoName.replace(".git", "");
-    const repoUrl = privateRepo ? `git@github.com:${user}/${repoName}.git` : `https://github.com/${user}/${repoName}.git`;
-    return repoUrl;
+    return privateRepo
+        ? `git@github.com:${user}/${repoName}.git`
+        : `https://github.com/${user}/${repoName}.git`;
 }
 
 export async function cloneRepo(spinner, cloneDir, user, repoName, branch = "main", privateRepo = false) {
@@ -20,14 +28,18 @@ export async function cloneRepo(spinner, cloneDir, user, repoName, branch = "mai
 
     try {
         await new Promise((resolve, reject) => {
-            const gitProcess = spawn("git", ["clone", "-b", branch, "--single-branch", url, cloneDir], { stdio: "pipe" });
+            const gitProcess = spawn("git", ["clone", "-b", branch, "--single-branch", url, cloneDir], {
+                stdio: "pipe",
+                uid: UID,
+                gid: GID,
+            });
+
             let stderr = "";
 
             gitProcess.stderr.on("data", (data) => {
                 stderr += data.toString();
             });
 
-            // Timeout after 30 seconds
             const timeout = setTimeout(() => {
                 gitProcess.kill();
                 reject(chalk.orange("Clone timed out"));
@@ -56,32 +68,24 @@ export async function getRepoUrlFromPath(repoPath) {
     try {
         const remotes = await git.getRemotes(true);
         const originRemote = remotes.find(r => r.name === "origin");
-        if (originRemote) {
-            return originRemote.refs.fetch;
-        } else {
-            console.log("No origin remote found!");
-            return null;
-        }
+        return originRemote ? originRemote.refs.fetch : null;
     } catch (err) {
         throw err;
     }
 }
 
 export async function gitPullRepo(spinner, path) {
-    const repoUrl = await getRepoUrlFromPath(path) ?? "Not found";
+    const repoUrl = (await getRepoUrlFromPath(path)) ?? "Not found";
     const git = simpleGit(path);
 
     spinner.text = `Force pulling from ${repoUrl}`;
     try {
-        // Fetch all updates from remote
         await git.fetch();
 
-        // Get current branch name
         const status = await git.status();
         const branch = status.current;
 
-        // Reset hard to remote branch, overwriting local changes
-        await git.reset(['--hard', `origin/${branch}`]);
+        await git.reset(["--hard", `origin/${branch}`]);
 
         spinner.text = `Force pulled from ${repoUrl}`;
     } catch (err) {

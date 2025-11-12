@@ -30,6 +30,13 @@ function normalizePath(path) {
     return `/${path.replace(/^\/+|\/+$/g, '')}/`;
 }
 
+function sudoWriteFile(filePath, content) {
+    execSync(`echo ${JSON.stringify(content)} | sudo tee ${filePath} > /dev/null`);
+}
+
+function sudoSymlink(src, dest) {
+    execSync(`sudo ln -sf ${src} ${dest}`);
+}
 
 export function nginxSetup() {
     if (process.platform === "win32") {
@@ -52,7 +59,7 @@ export function nginxSetup() {
 
 function updateNginxHTTPConfig(reload = true) {
     if (!hasNginx()) {
-        console.warn(chalk.yellow("NGINX is not installed on this system. Please install NGINX for its functions."));
+        console.warn(chalk.yellow("NGINX not installed."));
         return;
     }
 
@@ -61,35 +68,27 @@ function updateNginxHTTPConfig(reload = true) {
 
     for (const server in serverConfigJson) {
         const serverNginxPath = `/etc/nginx/sites-available/http${server}`;
-        if (!fs.existsSync(serverNginxPath)) {
-            fs.writeFileSync(serverNginxPath, "");
-        }
+        const enabledPath = `/etc/nginx/sites-enabled/http${server}`;
         const serverConfigValues = serverConfigJson[server];
-        const config = `
 
+        const config = `
 server {
     listen 80;
     server_name ${serverConfigValues.urls.join(" ")};
-
     return 301 https://$host$request_uri;
 }
-
 `.trim();
-        fs.writeFileSync(serverNginxPath, config);
 
-        const enabledPath = `/etc/nginx/sites-enabled/http${server}`;
-        if (!fs.existsSync(enabledPath)) {
-            execSync(`ln -s ${serverNginxPath} ${enabledPath}`);
-        }
+        sudoWriteFile(serverNginxPath, config);
+        sudoSymlink(serverNginxPath, enabledPath);
     }
-    if (reload) {
-        execSync(`systemctl reload nginx`);
-    }
+
+    if (reload) execSync(`sudo systemctl reload nginx`);
 }
 
 function updateNginxHTTPSConfig(reload = true) {
     if (!hasNginx()) {
-        console.warn(chalk.yellow("NGINX is not installed on this system. Please install NGINX for its functions."));
+        console.warn(chalk.yellow("NGINX not installed."));
         return;
     }
 
@@ -100,12 +99,13 @@ function updateNginxHTTPSConfig(reload = true) {
 
     for (const server in serverConfigJson) {
         const serverNginxPath = `/etc/nginx/sites-available/https${server}`;
-        if (!fs.existsSync(serverNginxPath)) {
-            fs.writeFileSync(serverNginxPath, "");
-        }
+        const enabledPath = `/etc/nginx/sites-enabled/https${server}`;
         const serverConfigValues = serverConfigJson[server];
+
+        // Skip servers missing certs
         if (!serverConfigValues.certificate || !serverConfigValues.certificateKey) continue;
         if (!fs.existsSync(serverConfigValues.certificate) || !fs.existsSync(serverConfigValues.certificateKey)) continue;
+
         let fullConfig = `
 server {
     listen 443 ssl;
@@ -113,8 +113,8 @@ server {
     ssl_certificate ${serverConfigValues.certificate};
     ssl_certificate_key ${serverConfigValues.certificateKey};
     client_max_body_size 1024M;
+`;
 
-`
         for (const service in serviceConfigJson) {
             const serviceConfigValues = serviceConfigJson[service];
             if (!serviceConfigValues.servers.includes(server)) continue;
@@ -122,8 +122,7 @@ server {
             const httpType = serviceConfigValues.https ? "https" : "http";
             fullConfig += `
     location ${normalizePath(serviceConfigValues.uri)} {
-        # Handle CORS preflight requests
-        if ($request_method = OPTIONS ) {
+        if ($request_method = OPTIONS) {
             add_header 'Access-Control-Allow-Origin' '*' always;
             add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
             add_header 'Access-Control-Allow-Headers' 'Origin, Content-Type, Accept, Authorization' always;
@@ -133,9 +132,7 @@ server {
             return 204;
         }
 
-        # For actual requests
         add_header 'Access-Control-Allow-Origin' '*';
-
         proxy_pass ${httpType}://localhost:${serviceConfigValues.port}/;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
@@ -144,23 +141,20 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_ssl_verify off;
     }
-
-`
+`;
         }
+
         fullConfig += `
 }
-`
-        fs.writeFileSync(serverNginxPath, fullConfig.trim());
+`.trim();
 
-        const enabledPath = `/etc/nginx/sites-enabled/https${server}`;
-        if (!fs.existsSync(enabledPath)) {
-            execSync(`ln -s ${serverNginxPath} ${enabledPath}`);
-        }
+        sudoWriteFile(serverNginxPath, fullConfig);
+        sudoSymlink(serverNginxPath, enabledPath);
     }
-    if (reload) {
-        execSync(`systemctl reload nginx`);
-    }
+
+    if (reload) execSync(`sudo systemctl reload nginx`);
 }
+
 
 export function updateNginxConfig(reload = true) {
     if (process.platform === "win32") return;
@@ -173,7 +167,7 @@ export function updateNginxConfig(reload = true) {
     updateNginxHTTPConfig(false);
     updateNginxHTTPSConfig(false);
     if (reload) {
-        execSync(`systemctl reload nginx`);
+        execSync(`sudo systemctl reload nginx`);
     }
 }
 

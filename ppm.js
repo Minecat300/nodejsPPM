@@ -128,13 +128,22 @@ export function addPm2Package(pkg, installPath) {
         } else {
             // Linux/macOS: keep original logic
             const user = getUser();
-            execSync(`sudo -u ${user} pm2 restart ${pkg.pm2.name} || sudo -u ${user} pm2 start ${path.join(installPath, pkg.pm2.file)} --name ${pkg.pm2.name}`, { stdio: "inherit" });
-            execSync(`sudo -u ${user} pm2 save`, { stdio: "inherit" });
+            execSync(
+                `pm2 restart ${pkg.pm2.name} || pm2 start ${path.join(installPath, pkg.pm2.file)} --name ${pkg.pm2.name}`,
+                { stdio: "inherit", uid: process.getuid(), gid: process.getgid() } // ensures running as the user
+            );
+
+            execSync(`pm2 save`, { stdio: "inherit", uid: process.getuid(), gid: process.getgid() });
 
             exec("pm2 startup systemd", (error, stdout, stderr) => {
                 const output = stdout + stderr;
                 const sudoLine = output.split("\n").find(l => l.includes("sudo"));
-                console.log(sudoLine ? sudoLine.trim() : chalk.yellow("No sudo command needed, PM2 configured automatically."));
+                if (sudoLine) {
+                    console.log(chalk.yellow("To enable PM2 startup on boot, run:"));
+                    console.log(chalk.green(sudoLine.trim())); // leave it to user to run once
+                } else {
+                    console.log(chalk.green("PM2 startup configured automatically."));
+                }
             });
         }
     } catch (err) {
@@ -147,8 +156,7 @@ export function removePm2Package(pkg) {
         if (process.platform === "win32") {
             execSync(`pm2 delete ${pkg.pm2.name}`, { stdio: "inherit" });
         } else {
-            const user = getUser();
-            execSync(`sudo -u ${user} pm2 delete ${pkg.pm2.name}`, { stdio: "inherit" });
+            execSync(`pm2 delete ${pkg.pm2.name}`, { stdio: "inherit", uid: process.getuid(), gid: process.getgid() });
         }
     } catch (err) {
         throw err;
@@ -160,8 +168,7 @@ export function restartPm2Package(pkg) {
         if (process.platform === "win32") {
             execSync(`pm2 restart ${pkg.pm2.name}`, { stdio: "inherit" });
         } else {
-            const user = getUser();
-            execSync(`sudo -u ${user} pm2 restart ${pkg.pm2.name}`, { stdio: "inherit" });
+            execSync(`pm2 restart ${pkg.pm2.name}`, { stdio: "inherit", uid: process.getuid(), gid: process.getgid() });
         }
     } catch (err) {
         throw err;
