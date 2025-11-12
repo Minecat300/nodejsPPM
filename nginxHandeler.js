@@ -122,7 +122,7 @@ server {
             const httpType = serviceConfigValues.https ? "https" : "http";
             fullConfig += `
     location ${normalizePath(serviceConfigValues.uri)} {
-        if ($request_method = OPTIONS) {
+        if ($request_method = OPTIONS ) {
             add_header 'Access-Control-Allow-Origin' '*' always;
             add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
             add_header 'Access-Control-Allow-Headers' 'Origin, Content-Type, Accept, Authorization' always;
@@ -141,12 +141,13 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_ssl_verify off;
     }
-`;
+
+`
         }
 
         fullConfig += `
 }
-`.trim();
+`
 
         sudoWriteFile(serverNginxPath, fullConfig);
         sudoSymlink(serverNginxPath, enabledPath);
