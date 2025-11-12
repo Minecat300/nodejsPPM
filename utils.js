@@ -4,6 +4,7 @@ import { execSync } from "child_process";
 import { fileURLToPath } from "url";
 import chalk from "chalk";
 import process from "process";
+import os from "os";
 
 chalk.orange = chalk.rgb(255, 81, 0);
 chalk.trueCyan = chalk.rgb(39, 185, 232);
