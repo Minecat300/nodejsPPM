@@ -31,7 +31,9 @@ function normalizePath(path) {
 }
 
 function sudoWriteFile(filePath, content) {
-    execSync(`echo ${JSON.stringify(content)} | sudo tee ${filePath} > /dev/null`);
+    execSync(`sudo tee "${filePath}" > /dev/null << 'EOF'
+${content}
+EOF`);
 }
 
 function sudoSymlink(src, dest) {
