@@ -122,6 +122,7 @@ server {
             const httpType = serviceConfigValues.https ? "https" : "http";
             fullConfig += `
     location ${normalizePath(serviceConfigValues.uri)} {
+        # Handle CORS preflight requests
         if ($request_method = OPTIONS ) {
             add_header 'Access-Control-Allow-Origin' '*' always;
             add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
@@ -132,7 +133,9 @@ server {
             return 204;
         }
 
+        # For actual requests
         add_header 'Access-Control-Allow-Origin' '*';
+
         proxy_pass ${httpType}://localhost:${serviceConfigValues.port}/;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
@@ -144,10 +147,10 @@ server {
 
 `
         }
-
         fullConfig += `
 }
 `
+console.log(fullConfig)
 
         sudoWriteFile(serverNginxPath, fullConfig);
         sudoSymlink(serverNginxPath, enabledPath);
