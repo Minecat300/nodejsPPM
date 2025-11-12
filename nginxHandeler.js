@@ -152,7 +152,6 @@ server {
         fullConfig += `
 }
 `
-console.log(fullConfig)
 
         sudoWriteFile(serverNginxPath, fullConfig);
         sudoSymlink(serverNginxPath, enabledPath);

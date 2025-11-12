@@ -118,59 +118,43 @@ function removePackageData(packageName) {
     }
 }
 
-export function addPm2Package(pkg, installPath) {
-    try {
-        if (process.platform === "win32") {
-            // Windows: no sudo, just run PM2 as current user
-            execSync(`pm2 restart ${pkg.pm2.name} || pm2 start ${path.join(installPath, pkg.pm2.file)} --name ${pkg.pm2.name}`, { stdio: "inherit" });
-            execSync("pm2 save", { stdio: "inherit" });
-            console.log(chalk.green("PM2 configured on Windows as current user."));
-        } else {
-            // Linux/macOS: keep original logic
-            const user = getUser();
-            execSync(
-                `pm2 restart ${pkg.pm2.name} || pm2 start ${path.join(installPath, pkg.pm2.file)} --name ${pkg.pm2.name}`,
-                { stdio: "inherit", uid: process.getuid(), gid: process.getgid() } // ensures running as the user
-            );
-
-            execSync(`pm2 save`, { stdio: "inherit", uid: process.getuid(), gid: process.getgid() });
-
-            exec("pm2 startup systemd", (error, stdout, stderr) => {
-                const output = stdout + stderr;
-                const sudoLine = output.split("\n").find(l => l.includes("sudo"));
-                if (sudoLine) {
-                    console.log(chalk.yellow("To enable PM2 startup on boot, run:"));
-                    console.log(chalk.green(sudoLine.trim())); // leave it to user to run once
-                } else {
-                    console.log(chalk.green("PM2 startup configured automatically."));
-                }
-            });
-        }
-    } catch (err) {
-        throw err;
+function getCwd() {
+    let cwd = process.cwd();
+    if (!fs.existsSync(cwd)) {
+        cwd = os.homedir(); // fallback to home if cwd was deleted
     }
+    return cwd;
 }
 
 export function removePm2Package(pkg) {
     try {
-        if (process.platform === "win32") {
-            execSync(`pm2 delete ${pkg.pm2.name}`, { stdio: "inherit" });
-        } else {
-            execSync(`pm2 delete ${pkg.pm2.name}`, { stdio: "inherit", uid: process.getuid(), gid: process.getgid() });
-        }
+        const cwd = getCwd();
+        execSync(`pm2 delete ${pkg.pm2.name}`, { stdio: "inherit", cwd });
     } catch (err) {
+        console.error("Failed to remove PM2 package:", err.message);
         throw err;
     }
 }
 
 export function restartPm2Package(pkg) {
     try {
-        if (process.platform === "win32") {
-            execSync(`pm2 restart ${pkg.pm2.name}`, { stdio: "inherit" });
-        } else {
-            execSync(`pm2 restart ${pkg.pm2.name}`, { stdio: "inherit", uid: process.getuid(), gid: process.getgid() });
-        }
+        const cwd = getCwd();
+        execSync(`pm2 restart ${pkg.pm2.name}`, { stdio: "inherit", cwd });
     } catch (err) {
+        console.error("Failed to restart PM2 package:", err.message);
+        throw err;
+    }
+}
+
+export function addPm2Package(pkg, installPath) {
+    try {
+        const cwd = getCwd();
+        const fullPath = `${installPath}/${pkg.pm2.file}`;
+        execSync(`pm2 restart ${pkg.pm2.name} || pm2 start ${fullPath} --name ${pkg.pm2.name}`, { stdio: "inherit", cwd });
+        execSync(`pm2 save`, { stdio: "inherit", cwd });
+        console.log("PM2 package configured as current user.");
+    } catch (err) {
+        console.error("Failed to add PM2 package:", err.message);
         throw err;
     }
 }
@@ -194,7 +178,7 @@ async function installPackage(user, repoName, branch, privateRepo, forceInstall)
         installDependancies(installPath);
         addPackageData(pkg, installPath);
         spinner.succeed(`Installed package: ${packageName}`);
-        const newInstallPath = installPath;
+        const newInstallPath = `${installPath}`;
         installPath = undefined;
 
         if (pkg.nginx) await addServiceFromPackage(pkg);
