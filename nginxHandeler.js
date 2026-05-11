@@ -12,6 +12,7 @@ chalk.orange = chalk.rgb(255, 81, 0);
 chalk.trueCyan = chalk.rgb(39, 185, 232);
 
 export function hasNginx() {
+    return false;
     try {
         const path = execSync("command -v nginx").toString().trim();
         return true;
