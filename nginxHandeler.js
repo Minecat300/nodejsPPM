@@ -29,7 +29,7 @@ export function nginxDisabled() {
 export function disableNginx(value) {
     const configPath = path.join(getCurrentDir(), "nginxConfig.json");
     const config = JSON.parse(fs.readFileSync(configPath));
-    config.enabled = !value;
+    config.enabled = value === "false";
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 }
 
