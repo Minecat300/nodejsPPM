@@ -313,6 +313,7 @@ function nginxCommands(command, args) {
             return;
         }
         if (command == "disable") {
+            if (!args._[2]) throw chalk.orange("No value was provided");
             disableNginx(args._[2]); 
             return;
         }
