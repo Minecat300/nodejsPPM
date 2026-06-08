@@ -317,7 +317,6 @@ function nginxCommands(command, args) {
             return;
         }
         if (command == "help" || command == "h" || command == "?" || !command) {
-            if (nginxDisabled()) console.log(chalk.yellow("NGINX is disabled."));
             console.log(chalk.trueCyan("Nginx Commands:"));
             console.log("ppm nginx", chalk.trueCyan("addService"), "<name> <port> <uri> <servers>       [--http] [--noreload, -n]");
             console.log("ppm nginx", chalk.trueCyan("addServer"), "<name> <urls> <certificate> <certificate key> [--noreload, -n]");
@@ -326,7 +325,8 @@ function nginxCommands(command, args) {
             console.log("ppm nginx", chalk.trueCyan("reload"));
             console.log("ppm nginx", chalk.trueCyan("listServices"), "<Item (optional)>");
             console.log("ppm nginx", chalk.trueCyan("listServers"), "<Item (optional)>");
-            console.log("ppm nginx", chalk.trueCyan("disable", "<boolean>"));
+            console.log("ppm nginx", chalk.trueCyan("disable"), "<boolean>");
+            if (nginxDisabled()) console.log(chalk.yellow("NGINX is disabled."));
             return;
         }
         console.log(chalk.trueCyan('Unknown Nginx Command. "ppm nginx help" for help'));
