@@ -8,7 +8,7 @@ import { execSync, exec } from "child_process";
 import process from "process";
 
 import { expandHomeDir, getCurrentDir, setUpFile, printTable, safeRemove, ensureDir, isDirEmpty, prependToKeyValue, stringToArray, getUser, getHomeDir, replaceWithEmpty } from "./utils.js";
-import { nginxSetup, addServiceFromPackage, removeService, removeServer, addNewService, addNewServer, updateNginxConfig, hasNginx, updateServiceFromPackage } from "./nginxHandeler.js";
+import { nginxSetup, addServiceFromPackage, removeService, removeServer, addNewService, addNewServer, updateNginxConfig, hasNginx, updateServiceFromPackage, nginxDisabled, disableNginx } from "./nginxHandeler.js";
 import { cloneRepo, gitPullRepo } from "./gitHandeler.js";
 
 chalk.orange = chalk.rgb(255, 81, 0)
@@ -204,10 +204,13 @@ function uninstallPackage(packageName) {
         if (!pkg) throw chalk.orange(`Package ${packageName} was not found`);
 
         safeRemove(pkg.installPath);
-        removePackageData(packageName);
+        if (!pkg.main) removePackageData(packageName);
         spinner.succeed(`Uninstalled package: ${packageName}`);
-        if (pkg.nginx) removeService(pkg.nginx.service.name);
-        if (pkg.pm2) removePm2Package(pkg);
+        
+        if (!pkg.main) {
+            if (pkg.nginx) removeService(pkg.nginx.service.name);
+            if (pkg.pm2) removePm2Package(pkg);
+        }
     
     } catch (err) {
         spinner.fail("Failed to uninstall.");
@@ -309,7 +312,12 @@ function nginxCommands(command, args) {
             printTable(serverConfigJson, args._[2] ? stringToArray(args._[2]) : ["urls", "certificate", "certificateKey"], args._[2] ? 100 : 30);
             return;
         }
+        if (command == "disable") {
+            disableNginx(args._[2]); 
+            return;
+        }
         if (command == "help" || command == "h" || command == "?" || !command) {
+            if (nginxDisabled()) console.log(chalk.yellow("NGINX is disabled."));
             console.log(chalk.trueCyan("Nginx Commands:"));
             console.log("ppm nginx", chalk.trueCyan("addService"), "<name> <port> <uri> <servers>       [--http] [--noreload, -n]");
             console.log("ppm nginx", chalk.trueCyan("addServer"), "<name> <urls> <certificate> <certificate key> [--noreload, -n]");
@@ -318,6 +326,7 @@ function nginxCommands(command, args) {
             console.log("ppm nginx", chalk.trueCyan("reload"));
             console.log("ppm nginx", chalk.trueCyan("listServices"), "<Item (optional)>");
             console.log("ppm nginx", chalk.trueCyan("listServers"), "<Item (optional)>");
+            console.log("ppm nginx", chalk.trueCyan("disable", "<boolean>"));
             return;
         }
         console.log(chalk.trueCyan('Unknown Nginx Command. "ppm nginx help" for help'));
@@ -336,7 +345,8 @@ export function setup() {
         [pkg.name]: {
             version: pkg.version,
             installPath: getCurrentDir(),
-            description: pkg.description
+            description: pkg.description,
+            main: true
         }
     }, null, 2));
 }

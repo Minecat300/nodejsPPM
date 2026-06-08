@@ -20,6 +20,19 @@ export function hasNginx() {
     }
 }
 
+export function nginxDisabled() {
+    const configPath = path.join(getCurrentDir(), "nginxConfig.json");
+    const config = JSON.parse(fs.readFileSync(configPath));
+    return config.enabled === false;
+}
+
+export function disableNginx(value) {
+    const configPath = path.join(getCurrentDir(), "nginxConfig.json");
+    const config = JSON.parse(fs.readFileSync(configPath));
+    config.enabled = !value;
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+}
+
 function normalizePath(path) {
     if (typeof path !== 'string') path = String(path || '');
 
@@ -51,17 +64,28 @@ export function nginxSetup() {
 
     const servicePath = path.join(getCurrentDir(), "nginxServiceConfig.json");
     const serverPath = path.join(getCurrentDir(), "nginxServerConfig.json");
+    const configPath = path.join(getCurrentDir(), "nginxConfig.json");
     if (!fs.existsSync(servicePath)) {
         setUpFile(servicePath, "{}");
     }
     if (!fs.existsSync(serverPath)) {
         setUpFile(serverPath, "{}");
     }
+    if (!fs.existsSync(configPath)) {
+        setUpFile(configPath, JSON.stringify({
+            enabled: true
+        }));
+    }
 }
 
 function updateNginxHTTPConfig(reload = true) {
     if (!hasNginx()) {
         console.warn(chalk.yellow("NGINX not installed."));
+        return;
+    }
+
+    if (nginxDisabled()) {
+        console.warn(chalk.yellow("NGINX is disabled."));
         return;
     }
 
@@ -91,6 +115,11 @@ server {
 function updateNginxHTTPSConfig(reload = true) {
     if (!hasNginx()) {
         console.warn(chalk.yellow("NGINX not installed."));
+        return;
+    }
+
+    if (nginxDisabled()) {
+        console.warn(chalk.yellow("NGINX is disabled."));
         return;
     }
 
@@ -166,6 +195,11 @@ export function updateNginxConfig(reload = true) {
 
     if (!hasNginx()) {
         console.warn(chalk.yellow("NGINX is not installed on this system. Please install NGINX for its functions."));
+        return;
+    }
+
+    if (nginxDisabled()) {
+        console.warn(chalk.yellow("NGINX is disabled."));
         return;
     }
 
